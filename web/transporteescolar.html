@@ -18,6 +18,7 @@
     }
     #tablaTransporteEscolar {
       font-size: 0.85rem;
+      width: 100% !important; /* fuerza ancho completo */
     }
     #tablaTransporteEscolar th {
       white-space: nowrap;
@@ -118,6 +119,7 @@
       </div>
     </div>
   </div>
+
   <!-- Tabla principal de transporteescolar -->
   <div class="tabla-container">
     <table id="tablaTransporteEscolar" class="display table table-striped table-bordered nowrap" style="width:100%">
@@ -152,7 +154,6 @@
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS - UNGE © IoT A NUESTRO ALCANCE - 2026
 </footer>
-
 <!-- jQuery, DataTables y extensiones -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
@@ -171,10 +172,13 @@
         { extend: 'excel', text: '⬇️ Descargar Excel' },
         { extend: 'print', text: '🖨️ Imprimir' }
       ],
-      responsive: true,
+      responsive: false,   // desactivamos responsive para mantener alineación
       scrollX: true,       // habilita scroll horizontal
-      autoWidth: false,    // evita desfases de columnas
-      stripeClasses: ['table-striped'] // mantiene sombreado alterno
+      autoWidth: true,     // fuerza ajuste automático de columnas
+      stripeClasses: ['table-striped'],
+      columnDefs: [
+        { targets: "_all", className: "dt-center" } // centra todas las columnas
+      ]
     });
 
     // Cargar datos de transporteescolar
