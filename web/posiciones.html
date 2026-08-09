@@ -226,6 +226,8 @@ $(document).ready(function() {
       .catch(err => console.error("Error cargando posiciones:", err));
   }
   cargarPosiciones();
+  // 🔄 Auto‑refresco cada 30 segundos
+  setInterval(cargarPosiciones, 30000);
 
   // Guardar posición (crear/editar)
   $('#formPosicion').submit(function(e) {
