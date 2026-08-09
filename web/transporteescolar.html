@@ -128,12 +128,12 @@
           <th>ID</th>
           <th>Fecha</th>
           <th>Capacidad</th>
-          <th>B. en Servicio</th>
-          <th>B. fuera de Servicio</th>
-          <th>Rutas Act.</th>
+          <th>Buses en Servicio</th>
+          <th>Buses fuera de Servicio</th>
+          <th>Rutas Activas</th>
           <th>Alertas Hoy</th>
-          <th>Ocup. Promedio</th>
-          <th>T. Prom. Llegada</th>
+          <th>Ocupación Promedio</th>
+          <th>Tiempo Promedio Llegada</th>
           <th>Ruta</th>
         </tr>
       </thead>
@@ -172,9 +172,9 @@
         { extend: 'excel', text: '⬇️ Descargar Excel' },
         { extend: 'print', text: '🖨️ Imprimir' }
       ],
-      responsive: false,   // desactivamos responsive para mantener alineación
-      scrollX: true,       // habilita scroll horizontal
-      autoWidth: true,     // fuerza ajuste automático de columnas
+      responsive: false,   // 🔧 desactivado para mantener alineación
+      scrollX: true,       // 🔧 scroll horizontal
+      autoWidth: false,    // 🔧 evita desfases de columnas
       stripeClasses: ['table-striped'],
       columnDefs: [
         { targets: "_all", className: "dt-center" } // centra todas las columnas
@@ -187,6 +187,18 @@
       .then(data => {
         tablaEscolar.clear();
         data.forEach(registro => {
+          // Formatear tiempo promedio llegada si es objeto
+          let tiempoLlegada = registro.tiempo_promedio_llegada;
+          if (typeof tiempoLlegada === "object" && tiempoLlegada !== null) {
+            if (tiempoLlegada.minutos !== undefined) {
+              tiempoLlegada = tiempoLlegada.minutos + " min";
+            } else if (tiempoLlegada.horas !== undefined && tiempoLlegada.minutos !== undefined) {
+              tiempoLlegada = tiempoLlegada.horas + "h " + tiempoLlegada.minutos + "m";
+            } else {
+              tiempoLlegada = JSON.stringify(tiempoLlegada);
+            }
+          }
+
           tablaEscolar.row.add([
             registro.id_transporte,
             registro.fecha,
@@ -196,7 +208,7 @@
             registro.rutas_activas,
             registro.alertas_hoy,
             registro.ocupacion_promedio,
-            registro.tiempo_promedio_llegada,
+            tiempoLlegada,
             registro.ruta
           ]);
         });
