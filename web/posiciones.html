@@ -277,9 +277,10 @@ $(document).ready(function() {
         $('#velocidad').val(p.velocidad);
         $('#direccion').val(p.direccion);
 
-        // ✅ Ajuste fecha/hora para datetime-local
-        const fechaISO = p.fecha_hora.substring(0,16);
-        $('#fechaHora').val(fechaISO);
+       // Ajuste fecha/hora para datetime-local
+const fechaISO = new Date(p.fecha_hora).toISOString().slice(0,16);
+$('#fechaHora').val(fechaISO);
+
 
         $('.modal-title').text("Editar Posición");
         $('#modalPosicionForm').modal('show');
@@ -343,7 +344,7 @@ $(document).ready(function() {
     }, 500);
   });
 
-
+});
 </script>
 </body>
 </html>
