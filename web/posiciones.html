@@ -232,39 +232,43 @@ $(document).ready(function() {
   // 🔄 Auto‑refresco cada 30 segundos
   setInterval(cargarPosiciones, 30000);
 
-  // Guardar posición (crear/editar)
-  $('#formPosicion').submit(function(e) {
-    e.preventDefault();
-    const id = $('#posicionId').val();
-    const posicion = {
-      id_bus: $('#idBus').val(),
-      id_ruta: $('#idRuta').val(),
-      latitud: $('#latitud').val(),
-      longitud: $('#longitud').val(),
-      velocidad: $('#velocidad').val(),
-      direccion: $('#direccion').val(),
-      fecha_hora: $('#fechaHora').val()
-    };
-    const metodo = id ? 'PUT' : 'POST';
-    const url = id ? `${API_BASE}/posiciones/${id}` : `${API_BASE}/posiciones`;
+// Guardar posición (crear/editar)
+$('#formPosicion').submit(function(e) {
+  e.preventDefault();
+  const id = $('#posicionId').val();
+  const posicion = {
+    id_bus: $('#idBus').val(),
+    id_ruta: $('#idRuta').val(),
+    latitud: $('#latitud').val(),
+    longitud: $('#longitud').val(),
+    velocidad: $('#velocidad').val(),
+    direccion: $('#direccion').val(),
+    fecha_hora: $('#fechaHora').val() // ya en formato válido
+  };
+  const metodo = id ? 'PUT' : 'POST';
+  const url = id ? `${API_BASE}/posiciones/${id}` : `${API_BASE}/posiciones`;
 
-    fetch(url, {
-      method: metodo,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(posicion)
-    })
-    .then(res => res.json())
-    .then(() => {
-      bootstrap.Modal.getInstance(document.getElementById('modalPosicionForm')).hide();
-      cargarPosiciones();
-    })
-    .catch(err => console.error("Error guardando posición:", err));
-  });
+  fetch(url, {
+    method: metodo,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(posicion)
+  })
+  .then(res => res.json())
+  .then(() => {
+    bootstrap.Modal.getInstance(document.getElementById('modalPosicionForm')).hide();
+    cargarPosiciones();
+  })
+  .catch(err => console.error("Error guardando posición:", err));
+});
 
-  $('#tablaPosiciones').on('click', '.editar', function() {
+// Editar posición
+$('#tablaPosiciones').on('click', '.editar', function() {
   const id = $(this).data('id');
   fetch(`${API_BASE}/posiciones/${id}`)
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) throw new Error("Posición no encontrada");
+      return res.json();
+    })
     .then(p => {
       $('#posicionId').val(p.id_posicion);
       $('#idBus').val(p.id_bus);
@@ -275,6 +279,7 @@ $(document).ready(function() {
       $('#direccion').val(p.direccion);
 
       // ✅ Ajuste fecha/hora para datetime-local
+      // Recorta "2026-08-07T07:05:00.000Z" a "2026-08-07T07:05"
       const fechaISO = p.fecha_hora.substring(0,16);
       $('#fechaHora').val(fechaISO);
 
@@ -283,6 +288,7 @@ $(document).ready(function() {
     })
     .catch(err => console.error("Error cargando posición:", err));
 });
+
 
 
 
