@@ -262,24 +262,29 @@ $(document).ready(function() {
   });
 
   // Editar posición
-  $('#tablaPosiciones').on('click', '.editar', function() {
-    const id = $(this).data('id');
-    fetch(`${API_BASE}/posiciones/${id}`)
-      .then(res => res.json())
-      .then(p => {
-        $('#posicionId').val(p.id_posicion);
-        $('#idBus').val(p.id_bus);
-        $('#idRuta').val(p.id_ruta);
-        $('#latitud').val(p.latitud);
-        $('#longitud').val(p.longitud);
-        $('#velocidad').val(p.velocidad);
-        $('#direccion').val(p.direccion);
-        $('#fechaHora').val(p.fecha_hora.replace(" ", "T"));
-        $('.modal-title').text("Editar Posición");
-        $('#modalPosicionForm').modal('show');
-      })
-      .catch(err => console.error("Error cargando posición:", err));
-  });
+$('#tablaPosiciones').on('click', '.editar', function() {
+  const id = $(this).data('id');
+  fetch(`${API_BASE}/posiciones/${id}`)
+    .then(res => res.json())
+    .then(p => {
+      $('#posicionId').val(p.id_posicion);
+      $('#idBus').val(p.id_bus);
+      $('#idRuta').val(p.id_ruta);
+      $('#latitud').val(p.latitud);
+      $('#longitud').val(p.longitud);
+      $('#velocidad').val(p.velocidad);
+      $('#direccion').val(p.direccion);
+
+      // ✅ Ajuste: usar formato ISO directamente
+      const fechaISO = p.fecha_hora.split('.')[0]; // quita el .000Z
+      $('#fechaHora').val(fechaISO);
+
+      $('.modal-title').text("Editar Posición");
+      $('#modalPosicionForm').modal('show');
+    })
+    .catch(err => console.error("Error cargando posición:", err));
+});
+
 
   // Eliminar posición
   $('#tablaPosiciones').on('click', '.eliminar', function() {
@@ -292,44 +297,48 @@ $(document).ready(function() {
   });
 
   // Ver mapa de posiciones (recorrido completo del bus)
-  $('#tablaPosiciones').on('click', '.verMapa', function() {
-    const id = $(this).data('id');
-    $('#modalPosicionMapa').modal('show');
+$('#tablaPosiciones').on('click', '.verMapa', function() {
+  const id = $(this).data('id');
+  $('#modalPosicionMapa').modal('show');
 
-    setTimeout(() => {
-      const map = L.map('mapPosiciones').setView([3.75, 8.78], 13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
+  setTimeout(() => {
+    // 🔄 limpiar contenedor del mapa antes de crear uno nuevo
+    document.getElementById('mapPosiciones').innerHTML = "";
 
-      // Obtener la posición seleccionada para saber el bus
-      fetch(`${API_BASE}/posiciones/${id}`)
-        .then(res => res.json())
-        .then(pos => {
-          // Cargar todo el historial de ese bus
-          fetch(`${API_BASE}/buses/${pos.id_bus}/posiciones`)
-            .then(res => res.json())
-            .then(historial => {
-              console.log("Historial recibido:", historial); // 👀 Ver en consola
-              const coords = [];
-              historial.forEach(p => {
-                const lat = parseFloat(p.latitud);
-                const lng = parseFloat(p.longitud);
-                if (!isNaN(lat) && !isNaN(lng)) {
-                  L.marker([lat, lng]).addTo(map)
-                    .bindPopup(`<b>Bus ${p.id_bus}</b><br>Ruta: ${p.id_ruta}<br>${p.direccion}<br>${p.fecha_hora}`);
-                  coords.push([lat, lng]);
-                }
-              });
-              if (coords.length > 1) {
-                L.polyline(coords, {color: 'blue'}).addTo(map);
-                map.fitBounds(coords);
+    const map = L.map('mapPosiciones').setView([3.75, 8.78], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Obtener la posición seleccionada para saber el bus
+    fetch(`${API_BASE}/posiciones/${id}`)
+      .then(res => res.json())
+      .then(pos => {
+        // Cargar todo el historial de ese bus
+        fetch(`${API_BASE}/buses/${pos.id_bus}/posiciones`)
+          .then(res => res.json())
+          .then(historial => {
+            console.log("Historial recibido:", historial); // 👀 Ver en consola
+            const coords = [];
+            historial.forEach(p => {
+              const lat = parseFloat(p.latitud);
+              const lng = parseFloat(p.longitud);
+              if (!isNaN(lat) && !isNaN(lng)) {
+                L.marker([lat, lng]).addTo(map)
+                  .bindPopup(`<b>Bus ${p.id_bus}</b><br>Ruta: ${p.id_ruta}<br>${p.direccion}<br>${p.fecha_hora}`);
+                coords.push([lat, lng]);
               }
             });
-        })
-        .catch(err => console.error("Error cargando recorrido:", err));
-    }, 500);
-  });
+            if (coords.length > 1) {
+              L.polyline(coords, {color: 'blue'}).addTo(map);
+              map.fitBounds(coords);
+            }
+          });
+      })
+      .catch(err => console.error("Error cargando recorrido:", err));
+  }, 500);
+});
+
 });
 </script>
 </body>
