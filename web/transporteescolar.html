@@ -190,10 +190,10 @@
           // Formatear tiempo promedio llegada si es objeto
           let tiempoLlegada = registro.tiempo_promedio_llegada;
           if (typeof tiempoLlegada === "object" && tiempoLlegada !== null) {
-            if (tiempoLlegada.minutos !== undefined) {
-              tiempoLlegada = tiempoLlegada.minutos + " min";
-            } else if (tiempoLlegada.horas !== undefined && tiempoLlegada.minutos !== undefined) {
-              tiempoLlegada = tiempoLlegada.horas + "h " + tiempoLlegada.minutos + "m";
+            if (tiempoLlegada.hours !== undefined || tiempoLlegada.minutes !== undefined) {
+              let h = tiempoLlegada.hours ? tiempoLlegada.hours + "h " : "";
+              let m = tiempoLlegada.minutes ? tiempoLlegada.minutes + "m" : "";
+              tiempoLlegada = h + m;
             } else {
               tiempoLlegada = JSON.stringify(tiempoLlegada);
             }
