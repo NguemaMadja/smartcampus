@@ -11,6 +11,27 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+  <style>
+    /* Botones de navegación impactantes */
+    .btn-gradient {
+      font-weight: bold;
+      color: #fff;
+      border: none;
+      padding: 15px 25px;
+      font-size: 1.2rem;
+      border-radius: 10px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .btn-gradient-green { background: linear-gradient(45deg, #28a745, #85e085); }
+    .btn-gradient-blue { background: linear-gradient(45deg, #007bff, #66b2ff); }
+    .btn-gradient-orange { background: linear-gradient(45deg, #fd7e14, #ffb366); }
+    .btn-gradient-purple { background: linear-gradient(45deg, #6f42c1, #b366ff); }
+    .btn-gradient:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    }
+  </style>
 </head>
 <body>
 
@@ -40,8 +61,45 @@
   </div>
 </nav>
 
+<!-- Botones de navegación impactantes -->
+<div class="d-flex flex-wrap gap-3 justify-content-center my-4">
+  <a href="transporteescolar.html" class="btn btn-gradient btn-gradient-green shadow-lg">🚍 Transporte Escolar</a>
+  <a href="buses.html" class="btn btn-gradient btn-gradient-blue shadow-lg">🚌 Buses</a>
+  <a href="rutas.html" class="btn btn-gradient btn-gradient-orange shadow-lg">🛣️ Rutas</a>
+  <a href="paradas.html" class="btn btn-gradient btn-gradient-purple shadow-lg">📍 Paradas</a>
+</div>
+
 <div class="container mt-4">
   <h2 class="mb-4">Gestión de Rutas</h2>
+
+  <!-- Mini-dashboard -->
+  <div class="row text-center mb-4">
+    <div class="col-md-4">
+      <div class="card bg-success text-white">
+        <div class="card-body">
+          <h5>Rutas Activas</h5>
+          <p class="fs-4" id="metricRutas">0</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card bg-info text-dark">
+        <div class="card-body">
+          <h5>Duración Promedio</h5>
+          <p class="fs-4" id="metricDuracion">0 min</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card bg-warning text-dark">
+        <div class="card-body">
+          <h5>Consumo Promedio</h5>
+          <p class="fs-4" id="metricConsumo">0 L</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#modalRuta">➕ Nueva Ruta</button>
 
   <!-- Tabla -->
@@ -58,12 +116,19 @@
     </thead>
     <tbody></tbody>
   </table>
+
+  <!-- Gráfica comparativa -->
+  <div class="card mt-4">
+    <div class="card-header">📊 Consumo por Ruta</div>
+    <div class="card-body">
+      <canvas id="graficaConsumo"></canvas>
+    </div>
+  </div>
 </div>
 
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS - UNGE © IoT A NUESTRO ALCANCE - 2026
 </footer>
-
 <!-- Modal Crear/Editar Ruta -->
 <div class="modal fade" id="modalRuta" tabindex="-1">
   <div class="modal-dialog">
@@ -74,26 +139,12 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="rutaId">
-        <div class="mb-3">
-          <label class="form-label">Nombre</label>
-          <input type="text" id="nombre" class="form-control" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Descripción</label>
-          <textarea id="descripcion" class="form-control"></textarea>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Hora Inicio</label>
-          <input type="time" id="horaInicio" class="form-control" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Hora Fin</label>
-          <input type="time" id="horaFin" class="form-control" required>
-        </div>
+        <div class="mb-3"><label class="form-label">Nombre</label><input type="text" id="nombre" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Descripción</label><textarea id="descripcion" class="form-control"></textarea></div>
+        <div class="mb-3"><label class="form-label">Hora Inicio</label><input type="time" id="horaInicio" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Hora Fin</label><input type="time" id="horaFin" class="form-control" required></div>
       </div>
-      <div class="modal-footer">
-        <button type="submit" class="btn btn-primary">Guardar</button>
-      </div>
+      <div class="modal-footer"><button type="submit" class="btn btn-primary">Guardar</button></div>
     </form>
   </div>
 </div>
@@ -106,12 +157,11 @@
         <h5 class="modal-title">Mapa de Ruta</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">
-        <div id="map" style="height:500px;"></div>
-      </div>
+      <div class="modal-body"><div id="map" style="height:500px;"></div></div>
     </div>
   </div>
 </div>
+
 <!-- JS -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
@@ -119,6 +169,7 @@
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
@@ -141,6 +192,8 @@ $(document).ready(function() {
       .then(res => res.json())
       .then(data => {
         tablaRutas.clear();
+        let totalDuracion = 0;
+        let totalConsumo = 0;
         data.forEach(ruta => {
           tablaRutas.row.add([
             ruta.id_ruta,
@@ -154,8 +207,32 @@ $(document).ready(function() {
               <button class="btn btn-sm btn-danger eliminar" data-id="${ruta.id_ruta}">🗑️ Eliminar</button>
             `
           ]);
+          // métricas rápidas
+          if(ruta.duracion) totalDuracion += ruta.duracion;
+          if(ruta.consumo) totalConsumo += ruta.consumo;
         });
         tablaRutas.draw();
+
+        // actualizar métricas
+        document.getElementById("metricRutas").textContent = data.length;
+        document.getElementById("metricDuracion").textContent = Math.round(totalDuracion / (data.length||1)) + " min";
+        document.getElementById("metricConsumo").textContent = Math.round(totalConsumo / (data.length||1)) + " L";
+
+        // actualizar gráfica
+        const ctx = document.getElementById('graficaConsumo').getContext('2d');
+        if(window.graficaConsumo) window.graficaConsumo.destroy();
+        window.graficaConsumo = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: data.map(r => r.nombre),
+            datasets: [{
+              label: 'Consumo (L)',
+              data: data.map(r => r.consumo || 0),
+              backgroundColor: 'rgba(0, 64, 128, 0.7)'
+            }]
+          },
+          options: { responsive: true }
+        });
       })
       .catch(err => console.error("Error cargando rutas:", err));
   }
@@ -184,7 +261,6 @@ $(document).ready(function() {
       return res.json();
     })
     .then(() => {
-      // Ocultar modal correctamente en Bootstrap 5
       const modal = bootstrap.Modal.getInstance(document.getElementById('modalRuta'));
       modal.hide();
       cargarRutas();
@@ -224,14 +300,12 @@ $(document).ready(function() {
     const id = $(this).data('id');
     $('#modalMapa').modal('show');
 
-    // Inicializar mapa
     setTimeout(() => {
-      const map = L.map('map').setView([3.75, 8.78], 13); // Coordenadas iniciales
+      const map = L.map('map').setView([3.75, 8.78], 13);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      // Cargar paradas desde el backend
       fetch(`${API_BASE}/rutas/${id}/paradas`)
         .then(res => res.json())
         .then(paradas => {
@@ -247,4 +321,3 @@ $(document).ready(function() {
 </script>
 </body>
 </html>
-
