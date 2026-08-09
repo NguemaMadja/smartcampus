@@ -172,8 +172,8 @@ $(document).ready(function() {
             p.id_bus,
             p.latitud,
             p.longitud,
-            p.velocidad,
-            p.timestamp,
+            p.velocidad || 0,
+            p.timestamp || "-",
             `<button class="btn btn-sm btn-info verMapa" data-id="${p.id_posicion}">🗺️ Ver</button>`
           ]);
           totalVelocidad += p.velocidad || 0;
@@ -183,7 +183,7 @@ $(document).ready(function() {
         // métricas rápidas
         document.getElementById("metricTotal").textContent = data.length;
         document.getElementById("metricPromedio").textContent = (totalVelocidad / (data.length||1)).toFixed(1) + " km/h";
-        document.getElementById("metricUltima").textContent = data.length ? data[data.length-1].timestamp : "-";
+        document.getElementById("metricUltima").textContent = data.length ? (data[data.length-1].timestamp || "-") : "-";
 
         // gráfica actividad
         const ctx = document.getElementById('graficaPosiciones').getContext('2d');
@@ -191,7 +191,7 @@ $(document).ready(function() {
         window.graficaPosiciones = new Chart(ctx, {
           type: 'line',
           data: {
-            labels: data.map(p => p.timestamp),
+            labels: data.map(p => p.timestamp || ""),
             datasets: [{
               label: 'Velocidad (km/h)',
               data: data.map(p => p.velocidad || 0),
@@ -221,7 +221,7 @@ $(document).ready(function() {
         .then(res => res.json())
         .then(pos => {
           L.marker([pos.latitud, pos.longitud]).addTo(map)
-            .bindPopup(`<b>Bus ${pos.id_bus}</b><br>Velocidad: ${pos.velocidad} km/h<br>${pos.timestamp}`);
+            .bindPopup(`<b>Bus ${pos.id_bus}</b><br>Velocidad: ${pos.velocidad || 0} km/h<br>${pos.timestamp || "-"}`);
         })
         .catch(err => console.error("Error cargando posición:", err));
     }, 500);
