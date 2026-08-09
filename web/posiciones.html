@@ -49,8 +49,7 @@
     </div>
   </div>
 </nav>
-
-<!-- Botones de navegación impactantes -->
+<!-- Botones de navegación -->
 <div class="d-flex flex-wrap gap-3 justify-content-center my-4">
   <a href="transporteescolar.html" class="btn btn-gradient btn-gradient-green shadow-lg">🚍 Transporte Escolar</a>
   <a href="buses.html" class="btn btn-gradient btn-gradient-blue shadow-lg">🚌 Buses</a>
@@ -139,7 +138,7 @@
   </div>
 </div>
 
-<!-- Gráfica de actividad -->
+<!-- Gráfica -->
 <div class="card mt-4">
   <div class="card-header">📊 Actividad de Posiciones</div>
   <div class="card-body">
@@ -150,9 +149,7 @@
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS - UNGE © IoT A NUESTRO ALCANCE - 2026
 </footer>
-
-  
- <!-- JS -->
+<!-- JS -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
@@ -210,7 +207,9 @@ $(document).ready(function() {
 
         // gráfica actividad
         const ctx = document.getElementById('graficaPosiciones').getContext('2d');
-        if(window.graficaPosiciones) window.graficaPosiciones.destroy();
+        if (window.graficaPosiciones && typeof window.graficaPosiciones.destroy === 'function') {
+          window.graficaPosiciones.destroy();
+        }
         window.graficaPosiciones = new Chart(ctx, {
           type: 'line',
           data: {
@@ -232,65 +231,61 @@ $(document).ready(function() {
   // 🔄 Auto‑refresco cada 30 segundos
   setInterval(cargarPosiciones, 30000);
 
-// Guardar posición (crear/editar)
-$('#formPosicion').submit(function(e) {
-  e.preventDefault();
-  const id = $('#posicionId').val();
-  const posicion = {
-    id_bus: $('#idBus').val(),
-    id_ruta: $('#idRuta').val(),
-    latitud: $('#latitud').val(),
-    longitud: $('#longitud').val(),
-    velocidad: $('#velocidad').val(),
-    direccion: $('#direccion').val(),
-    fecha_hora: $('#fechaHora').val() // ya en formato válido
-  };
-  const metodo = id ? 'PUT' : 'POST';
-  const url = id ? `${API_BASE}/posiciones/${id}` : `${API_BASE}/posiciones`;
+  // Guardar posición (crear/editar)
+  $('#formPosicion').submit(function(e) {
+    e.preventDefault();
+    const id = $('#posicionId').val();
+    const posicion = {
+      id_bus: $('#idBus').val(),
+      id_ruta: $('#idRuta').val(),
+      latitud: $('#latitud').val(),
+      longitud: $('#longitud').val(),
+      velocidad: $('#velocidad').val(),
+      direccion: $('#direccion').val(),
+      fecha_hora: $('#fechaHora').val()
+    };
+    const metodo = id ? 'PUT' : 'POST';
+    const url = id ? `${API_BASE}/posiciones/${id}` : `${API_BASE}/posiciones`;
 
-  fetch(url, {
-    method: metodo,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(posicion)
-  })
-  .then(res => res.json())
-  .then(() => {
-    bootstrap.Modal.getInstance(document.getElementById('modalPosicionForm')).hide();
-    cargarPosiciones();
-  })
-  .catch(err => console.error("Error guardando posición:", err));
-});
-
-// Editar posición
-$('#tablaPosiciones').on('click', '.editar', function() {
-  const id = $(this).data('id');
-  fetch(`${API_BASE}/posiciones/${id}`)
-    .then(res => {
-      if (!res.ok) throw new Error("Posición no encontrada");
-      return res.json();
+    fetch(url, {
+      method: metodo,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(posicion)
     })
-    .then(p => {
-      $('#posicionId').val(p.id_posicion);
-      $('#idBus').val(p.id_bus);
-      $('#idRuta').val(p.id_ruta);
-      $('#latitud').val(p.latitud);
-      $('#longitud').val(p.longitud);
-      $('#velocidad').val(p.velocidad);
-      $('#direccion').val(p.direccion);
-
-      // ✅ Ajuste fecha/hora para datetime-local
-      // Recorta "2026-08-07T07:05:00.000Z" a "2026-08-07T07:05"
-      const fechaISO = p.fecha_hora.substring(0,16);
-      $('#fechaHora').val(fechaISO);
-
-      $('.modal-title').text("Editar Posición");
-      $('#modalPosicionForm').modal('show');
+    .then(res => res.json())
+    .then(() => {
+      bootstrap.Modal.getInstance(document.getElementById('modalPosicionForm')).hide();
+      cargarPosiciones();
     })
-    .catch(err => console.error("Error cargando posición:", err));
-});
+    .catch(err => console.error("Error guardando posición:", err));
+  });
 
+  // Editar posición
+  $('#tablaPosiciones').on('click', '.editar', function() {
+    const id = $(this).data('id');
+    fetch(`${API_BASE}/posiciones/${id}`)
+      .then(res => {
+        if (!res.ok) throw new Error("Posición no encontrada");
+        return res.json();
+      })
+      .then(p => {
+        $('#posicionId').val(p.id_posicion);
+        $('#idBus').val(p.id_bus);
+        $('#idRuta').val(p.id_ruta);
+        $('#latitud').val(p.latitud);
+        $('#longitud').val(p.longitud);
+        $('#velocidad').val(p.velocidad);
+        $('#direccion').val(p.direccion);
 
+        // ✅ Ajuste fecha/hora para datetime-local
+        const fechaISO = p.fecha_hora.substring(0,16);
+        $('#fechaHora').val(fechaISO);
 
+        $('.modal-title').text("Editar Posición");
+        $('#modalPosicionForm').modal('show');
+      })
+      .catch(err => console.error("Error cargando posición:", err));
+  });
 
   // Eliminar posición
   $('#tablaPosiciones').on('click', '.eliminar', function() {
@@ -302,54 +297,51 @@ $('#tablaPosiciones').on('click', '.editar', function() {
     }
   });
 
-  
-  
-$('#tablaPosiciones').on('click', '.verMapa', function() {
-  const id = $(this).data('id');
-  $('#modalPosicionMapa').modal('show');
+  // Ver mapa de posiciones
+  $('#tablaPosiciones').on('click', '.verMapa', function() {
+    const id = $(this).data('id');
+    $('#modalPosicionMapa').modal('show');
 
-  setTimeout(() => {
-    // ✅ limpiar mapa anterior
-    if (window.mapInstance) {
-      window.mapInstance.remove();
-    }
-    document.getElementById('mapPosiciones').innerHTML = "";
+    setTimeout(() => {
+      // ✅ limpiar mapa anterior
+      if (window.mapInstance) {
+        window.mapInstance.remove();
+      }
+      document.getElementById('mapPosiciones').innerHTML = "";
 
-    const map = L.map('mapPosiciones').setView([3.75, 8.78], 13);
-    window.mapInstance = map;
+      const map = L.map('mapPosiciones').setView([3.75, 8.78], 13);
+      window.mapInstance = map;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
 
-    fetch(`${API_BASE}/posiciones/${id}`)
-      .then(res => res.json())
-      .then(pos => {
-        fetch(`${API_BASE}/buses/${pos.id_bus}/posiciones`)
-          .then(res => res.json())
-          .then(historial => {
-            console.log("Historial recibido:", historial);
-            const coords = [];
-            historial.forEach(p => {
-              const lat = parseFloat(p.latitud);
-              const lng = parseFloat(p.longitud);
-              if (!isNaN(lat) && !isNaN(lng)) {
-                L.marker([lat, lng]).addTo(map)
-                  .bindPopup(`<b>Bus ${p.id_bus}</b><br>Ruta: ${p.id_ruta}<br>${p.direccion}<br>${p.fecha_hora}`);
-                coords.push([lat, lng]);
+      fetch(`${API_BASE}/posiciones/${id}`)
+        .then(res => res.json())
+        .then(pos => {
+          fetch(`${API_BASE}/buses/${pos.id_bus}/posiciones`)
+            .then(res => res.json())
+            .then(historial => {
+              console.log("Historial recibido:", historial);
+              const coords = [];
+              historial.forEach(p => {
+                const lat = parseFloat(p.latitud);
+                const lng = parseFloat(p.longitud);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                  L.marker([lat, lng]).addTo(map)
+                    .bindPopup(`<b>Bus ${p.id_bus}</b><br>Ruta: ${p.id_ruta}<br>${p.direccion}<br>${p.fecha_hora}`);
+                  coords.push([lat, lng]);
+                }
+              });
+              if (coords.length > 1) {
+                L.polyline(coords, {color: 'blue'}).addTo(map);
+                map.fitBounds(coords);
               }
             });
-            if (coords.length > 1) {
-              L.polyline(coords, {color: 'blue'}).addTo(map);
-              map.fitBounds(coords);
-            }
-          });
-      })
-      .catch(err => console.error("Error cargando recorrido:", err));
-  }, 500);
-});
-
-
+        })
+        .catch(err => console.error("Error cargando recorrido:", err));
+    }, 500);
+  });
 
 });
 </script>
