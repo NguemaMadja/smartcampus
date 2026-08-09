@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
   <style>
     body, html { height: 100%; margin: 0; transition: background-color 0.3s, color 0.3s; }
-    #map { height: calc(100vh - 250px); width: 100%; }
+    #map { height: calc(100vh - 250px); width: 100%; transition: all 0.8s ease-in-out; }
     .leaflet-routing-container #btnCerrarRuta {
       display: inline-block; margin-left: 10px; padding: 6px 12px;
       background-color: #004080; color: #fff; font-weight: bold;
@@ -25,6 +25,18 @@
     /* Modo oscuro */
     body.dark-mode { background-color: #121212; color: #e0e0e0; }
     body.dark-mode .navbar, body.dark-mode footer { background-color: #000 !important; }
+    /* Tooltip rápido */
+    .custom-tooltip {
+      background: rgba(0,64,128,0.85);
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    /* Modo presentación */
+    #modoPresentacion {
+      position: fixed; top: 10px; right: 10px; z-index: 3000;
+    }
   </style>
 </head>
 <body>
@@ -103,12 +115,21 @@
     <div class="card-header">📈 Visitas en el tiempo</div>
     <div class="card-body">
       <canvas id="graficoVisitas"></canvas>
+      <div class="mt-2">
+        <button class="btn btn-sm btn-outline-primary" onclick="cambiarVista('dia')">Diaria</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="cambiarVista('semana')">Semanal</button>
+        <button class="btn btn-sm btn-outline-success" onclick="cambiarVista('mes')">Mensual</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="exportarCSV()">📤 Exportar CSV</button>
+      </div>
     </div>
   </div>
 
   <!-- Mapa -->
   <div id="map"></div>
 </div>
+
+<!-- Botón modo presentación -->
+<button id="modoPresentacion" class="btn btn-warning">🖥️ Modo Presentación</button>
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS -UNGE- @ IoT A NUESTRO ALCANCE - 2026
 </footer>
@@ -118,6 +139,7 @@
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
 <script>
   var map = L.map('map').setView([3.75, 8.78], 15);
@@ -147,6 +169,7 @@
   let routingControl = null;
   let historial = [];
   let visitas = []; // para gráfico
+  let heatPoints = []; // para mapa de calor
   // Geolocalización inicial
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(pos => {
@@ -157,15 +180,24 @@
           iconSize:[32,32]
         })
       }).addTo(map).bindPopup("📍 Tu ubicación actual").openPopup();
-      map.setView([lat, lng], 16);
+      map.flyTo([lat, lng], 16, {animate:true, duration:1.5}); // animación suave
     });
   }
+
+  // 🖥️ Modo presentación pantalla completa
+  document.getElementById("modoPresentacion").addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  });
   // Botón "Centrar en mi ubicación"
   document.getElementById("btnMiUbicacion").addEventListener("click", () => {
-    if(userMarker) map.setView(userMarker.getLatLng(), 16);
+    if(userMarker) map.flyTo(userMarker.getLatLng(), 16, {animate:true, duration:1.5});
   });
 
-  // Cargar edificios con iconos personalizados
+  // Cargar edificios con iconos personalizados y tooltips rápidos
   let edificiosData = [];
   fetch("/edificios").then(res => res.json()).then(data => {
     edificiosData = data;
@@ -179,42 +211,40 @@
         });
         let marker = L.marker([ed.lat, ed.lng], {icon: icono})
           .bindPopup(`<b>${ed.nombre}</b><br>${ed.ubicacion}`);
+        marker.bindTooltip(ed.nombre, {permanent:false, direction:"top", className:"custom-tooltip"});
         markersCluster.addLayer(marker);
       }
     });
   });
 
-  // Buscar edificio y mostrar ruta
+  // Buscar edificio y mostrar rutas alternativas
   async function buscarEdificio(nombre) {
     let edificio = edificiosData.find(e => e.nombre.toLowerCase() === nombre.toLowerCase());
     if(edificio){
-      map.setView([edificio.lat, edificio.lng], 18);
+      map.flyTo([edificio.lat, edificio.lng], 18, {animate:true, duration:1.5});
       L.marker([edificio.lat, edificio.lng]).addTo(map)
         .bindPopup(`<b>${edificio.nombre}</b><br>¡Bienvenido!`).openPopup();
 
       if(userMarker){
-        const puntoUsuario = turf.point([userMarker.getLatLng().lng, userMarker.getLatLng().lat]);
-        const puntoEdificio = turf.point([edificio.lng, edificio.lat]);
-        const distancia = turf.distance(puntoUsuario, puntoEdificio, {units: 'kilometers'});
-        const tiempo = (distancia / 5 * 60).toFixed(0);
+        const origen = L.latLng(userMarker.getLatLng().lat, userMarker.getLatLng().lng);
+        const destino = L.latLng(edificio.lat, edificio.lng);
 
         if(routingControl){ map.removeControl(routingControl); }
         routingControl = L.Routing.control({
-          waypoints: [
-            L.latLng(userMarker.getLatLng().lat, userMarker.getLatLng().lng),
-            L.latLng(edificio.lat, edificio.lng)
-          ],
+          waypoints: [origen, destino],
           routeWhileDragging: false,
-          show: true
+          show: true,
+          router: L.Routing.osrmv1({serviceUrl: 'https://router.project-osrm.org/route/v1'})
         }).addTo(map);
 
-        routingControl.on('routesfound', () => {
+        routingControl.on('routesfound', e => {
+          const routes = e.routes;
           const container = document.querySelector('.leaflet-routing-container');
           if(container && !document.getElementById('btnCerrarRuta')){
+            let opciones = routes.map((r,i)=>`Ruta ${i+1}: ${(r.summary.totalDistance/1000).toFixed(2)} km, ${(r.summary.totalTime/60).toFixed(0)} min`).join("<br>");
             const header = document.createElement('div');
             header.className = 'ruta-header';
-            header.innerHTML = `Distancia: ${distancia.toFixed(2)} km | Tiempo: ${tiempo} min 
-              <button id="btnCerrarRuta">Aceptar</button>`;
+            header.innerHTML = `${opciones}<br><button id="btnCerrarRuta">Aceptar</button>`;
             container.insertBefore(header, container.firstChild);
             document.getElementById('btnCerrarRuta').onclick = () => container.style.display = 'none';
           }
@@ -223,6 +253,7 @@
 
       historial.push(edificio.nombre);
       visitas.push({fecha: new Date(), lugar: edificio.nombre});
+      heatPoints.push([edificio.lat, edificio.lng, 1]); // para mapa de calor
       actualizarMetricas();
 
       // 🚀 Registrar huella en BD
@@ -252,31 +283,9 @@
       mostrarToast("⚠️ Edificio no encontrado");
     }
   }
-  // Botón buscar
-  document.getElementById("btnBuscar").addEventListener("click", () => {
-    buscarEdificio(document.getElementById("searchBar").value);
-  });
+  // Métricas simuladas + mapa de calor
+  let heatLayer = L.heatLayer([], {radius:25, blur:15, maxZoom:17}).addTo(map);
 
-  // Autocompletado
-  document.getElementById("searchBar").addEventListener("input", e => {
-    const val = e.target.value.toLowerCase();
-    const list = document.getElementById("autocompleteList");
-    list.innerHTML = "";
-    if(val.length > 1){
-      edificiosData.filter(ed => ed.nombre.toLowerCase().includes(val)).forEach(ed => {
-        const div = document.createElement("div");
-        div.textContent = ed.nombre;
-        div.onclick = () => {
-          document.getElementById("searchBar").value = ed.nombre;
-          list.innerHTML = "";
-          buscarEdificio(ed.nombre);
-        };
-        list.appendChild(div);
-      });
-    }
-  });
-
-  // Métricas simuladas
   function actualizarMetricas(){
     let conteo = {};
     historial.forEach(l => conteo[l] = (conteo[l]||0)+1);
@@ -292,6 +301,20 @@
       ul.innerHTML += `<li>${medalla} ${lugar} (${conteo[lugar]})</li>`;
     });
 
+    // Ranking visual en mapa
+    ranking.slice(0,3).forEach((lugar, idx) => {
+      let ed = edificiosData.find(e=>e.nombre===lugar);
+      if(ed){
+        L.circleMarker([ed.lat, ed.lng], {
+          radius: 12, color: idx===0?"gold":idx===1?"silver":"brown"
+        }).addTo(map).bindTooltip(`Top ${idx+1}: ${lugar}`, {className:"custom-tooltip"});
+      }
+    });
+
+    // Actualizar mapa de calor
+    heatLayer.setLatLngs(heatPoints);
+
+    // Actualizar gráfico
     const ctx = document.getElementById('graficoVisitas').getContext('2d');
     if(window.graficoVisitas) window.graficoVisitas.destroy();
     window.graficoVisitas = new Chart(ctx, {
@@ -307,6 +330,39 @@
       },
       options: { animation: { duration: 1000, easing: 'easeOutBounce' } }
     });
+  }
+
+  // Comparativa temporal
+  function cambiarVista(tipo){
+    let agrupado = {};
+    visitas.forEach(v=>{
+      let clave = tipo==="dia"? v.fecha.toLocaleDateString() :
+                  tipo==="semana"? "Semana "+Math.ceil(v.fecha.getDate()/7) :
+                  v.fecha.toLocaleDateString().slice(3,5); // mes
+      agrupado[clave] = (agrupado[clave]||0)+1;
+    });
+    const ctx = document.getElementById('graficoVisitas').getContext('2d');
+    if(window.graficoVisitas) window.graficoVisitas.destroy();
+    window.graficoVisitas = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(agrupado),
+        datasets: [{ label: 'Visitas '+tipo, data: Object.values(agrupado), backgroundColor:'rgba(0,64,128,0.6)' }]
+      }
+    });
+  }
+
+  // Exportación CSV
+  function exportarCSV(){
+    let csv = "Fecha,Lugar\n";
+    visitas.forEach(v=> csv += `${v.fecha.toISOString()},${v.lugar}\n`);
+    let blob = new Blob([csv], {type:"text/csv"});
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = "visitas_mapa.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   // Notificación visual (toast)
@@ -330,4 +386,3 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
