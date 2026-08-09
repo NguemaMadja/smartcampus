@@ -285,6 +285,20 @@ $('#tablaPosiciones').on('click', '.editar', function() {
     .catch(err => console.error("Error cargando posición:", err));
 });
 
+
+
+  // Eliminar posición
+  $('#tablaPosiciones').on('click', '.eliminar', function() {
+    const id = $(this).data('id');
+    if(confirm("¿Seguro que deseas eliminar esta posición?")) {
+      fetch(`${API_BASE}/posiciones/${id}`, { method: 'DELETE' })
+        .then(() => cargarPosiciones())
+        .catch(err => console.error("Error eliminando posición:", err));
+    }
+  });
+
+  
+  
 // Ver mapa de posiciones
 $('#tablaPosiciones').on('click', '.verMapa', function() {
   const id = $(this).data('id');
