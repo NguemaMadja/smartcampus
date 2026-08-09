@@ -89,27 +89,55 @@
     </div>
   </div>
 
+  <!-- Botón nueva posición -->
+  <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#modalPosicionForm">➕ Nueva Posición</button>
+
   <!-- Tabla -->
   <table id="tablaPosiciones" class="display table table-striped table-bordered nowrap" style="width:100%">
     <thead class="table-dark">
       <tr>
         <th>ID Posición</th>
         <th>ID Bus</th>
+        <th>ID Ruta</th>
         <th>Latitud</th>
         <th>Longitud</th>
         <th>Velocidad</th>
-        <th>Timestamp</th>
+        <th>Dirección</th>
+        <th>Fecha/Hora</th>
         <th>Acciones</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
-<!-- Modal Detalle Posición -->
-<div class="modal fade" id="modalPosicion" tabindex="-1">
+<!-- Modal Crear/Editar Posición -->
+<div class="modal fade" id="modalPosicionForm" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="formPosicion" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nueva Posición</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="posicionId">
+        <div class="mb-3"><label class="form-label">ID Bus</label><input type="number" id="idBus" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">ID Ruta</label><input type="number" id="idRuta" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Latitud</label><input type="text" id="latitud" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Longitud</label><input type="text" id="longitud" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Velocidad</label><input type="text" id="velocidad" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Dirección</label><input type="text" id="direccion" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Fecha/Hora</label><input type="datetime-local" id="fechaHora" class="form-control"></div>
+      </div>
+      <div class="modal-footer"><button type="submit" class="btn btn-primary">Guardar</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Mapa -->
+<div class="modal fade" id="modalPosicionMapa" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Detalle de Posición</h5>
+        <h5 class="modal-title">Mapa de Posición</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -170,11 +198,15 @@ $(document).ready(function() {
           tablaPosiciones.row.add([
             p.id_posicion,
             p.id_bus,
+            p.id_ruta,
             p.latitud,
             p.longitud,
             p.velocidad || 0,
-            p.timestamp || "-",
-            `<button class="btn btn-sm btn-info verMapa" data-id="${p.id_posicion}">🗺️ Ver</button>`
+            p.direccion || "-",
+            p.fecha_hora,
+            `<button class="btn btn-sm btn-info verMapa" data-id="${p.id_posicion}">🗺️ Ver</button>
+             <button class="btn btn-sm btn-warning editar" data-id="${p.id_posicion}">✏️ Editar</button>
+             <button class="btn btn-sm btn-danger eliminar" data-id="${p.id_posicion}">🗑️ Eliminar</button>`
           ]);
           totalVelocidad += p.velocidad || 0;
         });
@@ -183,7 +215,7 @@ $(document).ready(function() {
         // métricas rápidas
         document.getElementById("metricTotal").textContent = data.length;
         document.getElementById("metricPromedio").textContent = (totalVelocidad / (data.length||1)).toFixed(1) + " km/h";
-        document.getElementById("metricUltima").textContent = data.length ? (data[data.length-1].timestamp || "-") : "-";
+        document.getElementById("metricUltima").textContent = data.length ? data[data.length-1].fecha_hora : "-";
 
         // gráfica actividad
         const ctx = document.getElementById('graficaPosiciones').getContext('2d');
@@ -191,7 +223,7 @@ $(document).ready(function() {
         window.graficaPosiciones = new Chart(ctx, {
           type: 'line',
           data: {
-            labels: data.map(p => p.timestamp || ""),
+            labels: data.map(p => p.fecha_hora),
             datasets: [{
               label: 'Velocidad (km/h)',
               data: data.map(p => p.velocidad || 0),
@@ -206,10 +238,69 @@ $(document).ready(function() {
   }
   cargarPosiciones();
 
+  // Guardar posición (crear/editar)
+  $('#formPosicion').submit(function(e) {
+    e.preventDefault();
+    const id = $('#posicionId').val();
+    const posicion = {
+      id_bus: $('#idBus').val(),
+      id_ruta: $('#idRuta').val(),
+      latitud: $('#latitud').val(),
+      longitud: $('#longitud').val(),
+      velocidad: $('#velocidad').val(),
+      direccion: $('#direccion').val(),
+      fecha_hora: $('#fechaHora').val()
+    };
+    const metodo = id ? 'PUT' : 'POST';
+    const url = id ? `${API_BASE}/posiciones/${id}` : `${API_BASE}/posiciones`;
+
+    fetch(url, {
+      method: metodo,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(posicion)
+    })
+    .then(res => res.json())
+    .then(() => {
+      bootstrap.Modal.getInstance(document.getElementById('modalPosicionForm')).hide();
+      cargarPosiciones();
+    })
+    .catch(err => console.error("Error guardando posición:", err));
+  });
+
+  // Editar posición
+  $('#tablaPosiciones').on('click', '.editar', function() {
+    const id = $(this).data('id');
+    fetch(`${API_BASE}/posiciones/${id}`)
+      .then(res => res.json())
+      .then(p => {
+        $('#posicionId').val(p.id_posicion);
+        $('#idBus').val(p.id_bus);
+        $('#idRuta').val(p.id_ruta);
+        $('#latitud').val(p.latitud);
+        $('#longitud').val(p.longitud);
+        $('#velocidad').val(p.velocidad);
+        $('#direccion').val(p.direccion);
+        $('#fechaHora').val(p.fecha_hora.replace(" ", "T"));
+        $('.modal-title').text("Editar Posición");
+        $('#modalPosicionForm').modal('show');
+      })
+      .catch(err => console.error("Error cargando posición:", err));
+  });
+
+  // Eliminar posición
+  $('#tablaPosiciones').on('click', '.eliminar', function() {
+    const id = $(this).data('id');
+    if(confirm("¿Seguro que deseas eliminar esta posición?")) {
+      fetch(`${API_BASE}/posiciones/${id}`, { method: 'DELETE' })
+        .then(() => cargarPosiciones())
+        .catch(err => console.error("Error eliminando posición:", err));
+    }
+  });
+
   // Ver mapa de posición
   $('#tablaPosiciones').on('click', '.verMapa', function() {
     const id = $(this).data('id');
-    $('#modalPosicion').modal('show');
+    $('#modalPosicionMapa').modal('show');
 
     setTimeout(() => {
       const map = L.map('mapPosiciones').setView([3.75, 8.78], 13);
@@ -221,7 +312,7 @@ $(document).ready(function() {
         .then(res => res.json())
         .then(pos => {
           L.marker([pos.latitud, pos.longitud]).addTo(map)
-            .bindPopup(`<b>Bus ${pos.id_bus}</b><br>Velocidad: ${pos.velocidad || 0} km/h<br>${pos.timestamp || "-"}`);
+            .bindPopup(`<b>Bus ${pos.id_bus}</b><br>Ruta: ${pos.id_ruta}<br>Velocidad: ${pos.velocidad || 0} km/h<br>Dirección: ${pos.direccion || "-"}<br>${pos.fecha_hora}`);
         })
         .catch(err => console.error("Error cargando posición:", err));
     }, 500);
