@@ -286,7 +286,7 @@ $(document).ready(function() {
     }
   });
 
-  // Ver mapa de posiciones (recorrido completo)
+  // Ver mapa de posiciones (recorrido completo del bus)
   $('#tablaPosiciones').on('click', '.verMapa', function() {
     const id = $(this).data('id');
     $('#modalPosicionMapa').modal('show');
@@ -297,10 +297,11 @@ $(document).ready(function() {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      // Cargar historial completo del bus de esa posición
+      // Obtener la posición seleccionada para saber el bus
       fetch(`${API_BASE}/posiciones/${id}`)
         .then(res => res.json())
         .then(pos => {
+          // Cargar todo el historial de ese bus
           fetch(`${API_BASE}/buses/${pos.id_bus}/posiciones`)
             .then(res => res.json())
             .then(historial => {
