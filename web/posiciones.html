@@ -63,7 +63,7 @@
 
   <!-- Mini-dashboard -->
   <div class="row text-center mb-4">
-    <div class="col-md-4">
+    <div class="col-md-6">
       <div class="card bg-success text-white">
         <div class="card-body">
           <h5>Total Posiciones</h5>
@@ -71,15 +71,7 @@
         </div>
       </div>
     </div>
-    <div class="col-md-4">
-      <div class="card bg-info text-dark">
-        <div class="card-body">
-          <h5>Promedio Velocidad</h5>
-          <p class="fs-4" id="metricPromedio">0 km/h</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4">
+    <div class="col-md-6">
       <div class="card bg-warning text-dark">
         <div class="card-body">
           <h5>Última Actualización</h5>
@@ -137,7 +129,7 @@
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Mapa de Posición</h5>
+        <h5 class="modal-title">Mapa de Posiciones</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -193,7 +185,6 @@ $(document).ready(function() {
       .then(res => res.json())
       .then(data => {
         tablaPosiciones.clear();
-        let totalVelocidad = 0;
         data.forEach(p => {
           tablaPosiciones.row.add([
             p.id_posicion,
@@ -208,13 +199,11 @@ $(document).ready(function() {
              <button class="btn btn-sm btn-warning editar" data-id="${p.id_posicion}">✏️ Editar</button>
              <button class="btn btn-sm btn-danger eliminar" data-id="${p.id_posicion}">🗑️ Eliminar</button>`
           ]);
-          totalVelocidad += p.velocidad || 0;
         });
         tablaPosiciones.draw();
 
         // métricas rápidas
         document.getElementById("metricTotal").textContent = data.length;
-        document.getElementById("metricPromedio").textContent = (totalVelocidad / (data.length||1)).toFixed(1) + " km/h";
         document.getElementById("metricUltima").textContent = data.length ? data[data.length-1].fecha_hora : "-";
 
         // gráfica actividad
@@ -297,7 +286,7 @@ $(document).ready(function() {
     }
   });
 
-  // Ver mapa de posición
+  // Ver mapa de posiciones (recorrido completo)
   $('#tablaPosiciones').on('click', '.verMapa', function() {
     const id = $(this).data('id');
     $('#modalPosicionMapa').modal('show');
@@ -308,13 +297,26 @@ $(document).ready(function() {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
+      // Cargar historial completo del bus de esa posición
       fetch(`${API_BASE}/posiciones/${id}`)
         .then(res => res.json())
         .then(pos => {
-          L.marker([pos.latitud, pos.longitud]).addTo(map)
-            .bindPopup(`<b>Bus ${pos.id_bus}</b><br>Ruta: ${pos.id_ruta}<br>Velocidad: ${pos.velocidad || 0} km/h<br>Dirección: ${pos.direccion || "-"}<br>${pos.fecha_hora}`);
+          fetch(`${API_BASE}/buses/${pos.id_bus}/posiciones`)
+            .then(res => res.json())
+            .then(historial => {
+              const coords = [];
+              historial.forEach(p => {
+                L.marker([p.latitud, p.longitud]).addTo(map)
+                  .bindPopup(`<b>Bus ${p.id_bus}</b><br>Ruta: ${p.id_ruta}<br>${p.fecha_hora}`);
+                coords.push([p.latitud, p.longitud]);
+              });
+              if (coords.length > 1) {
+                L.polyline(coords, {color: 'blue'}).addTo(map);
+                map.fitBounds(coords);
+              }
+            });
         })
-        .catch(err => console.error("Error cargando posición:", err));
+        .catch(err => console.error("Error cargando recorrido:", err));
     }, 500);
   });
 });
