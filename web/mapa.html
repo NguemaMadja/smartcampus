@@ -32,7 +32,6 @@
   <a href="admin.html" class="btn btn-outline-secondary">⬅️ Volver al Panel Principal</a>
   <a href="usuarios.html" class="btn btn-primary">Ir al Módulo Usuarios ➡️</a>
 </div>
-
 <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: rgba(0, 64, 128, 0.85);">
   <div class="container-fluid">
     <a class="navbar-brand fw-bold" href="admin.html">SmartCampusGuide</a>
@@ -59,10 +58,11 @@
     </div>
   </div>
 </nav>
+
 <div class="container mt-4">
   <h2>Mapa Interactivo del Campus</h2>
   
-  <!-- Barra de búsqueda con botón y centrar ubicación -->
+  <!-- Barra de búsqueda -->
   <div class="input-group mb-3 position-relative">
     <input type="text" id="searchBar" class="form-control" placeholder="Buscar edificio o lugar de interés...">
     <button id="btnBuscar" class="btn btn-primary">🔍 Buscar</button>
@@ -70,7 +70,7 @@
     <div id="autocompleteList"></div>
   </div>
 
-  <!-- Métricas simuladas -->
+  <!-- Métricas -->
   <div class="row mb-4">
     <div class="col-md-4 col-sm-12 mb-3">
       <div class="card text-center">
@@ -92,15 +92,13 @@
       <div class="card text-center">
         <div class="card-body">
           <h5>Ranking de lugares</h5>
-          <ul id="rankingLugares" class="list-unstyled mb-0">
-            <!-- Se llenará dinámicamente con 🥇🥈🥉 -->
-          </ul>
+          <ul id="rankingLugares" class="list-unstyled mb-0"></ul>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Gráfico de visitas en el tiempo -->
+  <!-- Gráfico -->
   <div class="card mb-4">
     <div class="card-header">📈 Visitas en el tiempo</div>
     <div class="card-body">
@@ -111,10 +109,10 @@
   <!-- Mapa -->
   <div id="map"></div>
 </div>
-
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS -UNGE- @ IoT A NUESTRO ALCANCE - 2026
 </footer>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf/turf.min.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
@@ -162,7 +160,6 @@
       map.setView([lat, lng], 16);
     });
   }
-
   // Botón "Centrar en mi ubicación"
   document.getElementById("btnMiUbicacion").addEventListener("click", () => {
     if(userMarker) map.setView(userMarker.getLatLng(), 16);
@@ -186,6 +183,7 @@
       }
     });
   });
+
   // Buscar edificio y mostrar ruta
   async function buscarEdificio(nombre) {
     let edificio = edificiosData.find(e => e.nombre.toLowerCase() === nombre.toLowerCase());
@@ -233,7 +231,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            id_usuario: 1, // tu ID real
+            id_usuario: 1,
             accion: 'buscar',
             modulo: 'Mapa',
             detalle: `Usuario buscó ${edificio.nombre}`,
@@ -246,6 +244,9 @@
       } catch (err) {
         console.error("Error registrando huella:", err);
       }
+
+      // ✅ Limpieza automática del campo de búsqueda
+      document.getElementById("searchBar").value = "";
 
     } else {
       mostrarToast("⚠️ Edificio no encontrado");
@@ -307,6 +308,7 @@
       options: { animation: { duration: 1000, easing: 'easeOutBounce' } }
     });
   }
+
   // Notificación visual (toast)
   function mostrarToast(msg){
     let toast = document.createElement("div");
@@ -325,7 +327,7 @@
   }
 </script>
 
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
