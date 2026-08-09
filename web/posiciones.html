@@ -150,7 +150,9 @@
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS - UNGE © IoT A NUESTRO ALCANCE - 2026
 </footer>
-<!-- JS -->
+
+  
+ <!-- JS -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
@@ -215,7 +217,7 @@ $(document).ready(function() {
             labels: data.map(p => p.fecha_hora),
             datasets: [{
               label: 'Velocidad (km/h)',
-              data: data.map(p => p.velocidad || 0),
+              data: data.map(p => parseFloat(p.velocidad) || 0),
               borderColor: 'rgba(0, 64, 128, 0.7)',
               fill: false
             }]
@@ -226,6 +228,7 @@ $(document).ready(function() {
       .catch(err => console.error("Error cargando posiciones:", err));
   }
   cargarPosiciones();
+
   // 🔄 Auto‑refresco cada 30 segundos
   setInterval(cargarPosiciones, 30000);
 
@@ -307,11 +310,16 @@ $(document).ready(function() {
           fetch(`${API_BASE}/buses/${pos.id_bus}/posiciones`)
             .then(res => res.json())
             .then(historial => {
+              console.log("Historial recibido:", historial); // 👀 Ver en consola
               const coords = [];
               historial.forEach(p => {
-                L.marker([p.latitud, p.longitud]).addTo(map)
-                  .bindPopup(`<b>Bus ${p.id_bus}</b><br>Ruta: ${p.id_ruta}<br>${p.fecha_hora}`);
-                coords.push([p.latitud, p.longitud]);
+                const lat = parseFloat(p.latitud);
+                const lng = parseFloat(p.longitud);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                  L.marker([lat, lng]).addTo(map)
+                    .bindPopup(`<b>Bus ${p.id_bus}</b><br>Ruta: ${p.id_ruta}<br>${p.direccion}<br>${p.fecha_hora}`);
+                  coords.push([lat, lng]);
+                }
               });
               if (coords.length > 1) {
                 L.polyline(coords, {color: 'blue'}).addTo(map);
