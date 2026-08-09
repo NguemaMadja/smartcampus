@@ -275,8 +275,8 @@ $('#tablaPosiciones').on('click', '.editar', function() {
       $('#velocidad').val(p.velocidad);
       $('#direccion').val(p.direccion);
 
-      // ✅ Ajuste: usar formato ISO directamente
-      const fechaISO = p.fecha_hora.split('.')[0]; // quita el .000Z
+      // ✅ Ajuste fecha/hora
+      const fechaISO = p.fecha_hora.split('.')[0];
       $('#fechaHora').val(fechaISO);
 
       $('.modal-title').text("Editar Posición");
@@ -285,24 +285,13 @@ $('#tablaPosiciones').on('click', '.editar', function() {
     .catch(err => console.error("Error cargando posición:", err));
 });
 
-
-  // Eliminar posición
-  $('#tablaPosiciones').on('click', '.eliminar', function() {
-    const id = $(this).data('id');
-    if(confirm("¿Seguro que deseas eliminar esta posición?")) {
-      fetch(`${API_BASE}/posiciones/${id}`, { method: 'DELETE' })
-        .then(() => cargarPosiciones())
-        .catch(err => console.error("Error eliminando posición:", err));
-    }
-  });
-
-  // Ver mapa de posiciones (recorrido completo del bus)
+// Ver mapa de posiciones
 $('#tablaPosiciones').on('click', '.verMapa', function() {
   const id = $(this).data('id');
   $('#modalPosicionMapa').modal('show');
 
   setTimeout(() => {
-    // 🔄 limpiar contenedor del mapa antes de crear uno nuevo
+    // ✅ limpiar contenedor
     document.getElementById('mapPosiciones').innerHTML = "";
 
     const map = L.map('mapPosiciones').setView([3.75, 8.78], 13);
@@ -310,15 +299,13 @@ $('#tablaPosiciones').on('click', '.verMapa', function() {
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // Obtener la posición seleccionada para saber el bus
     fetch(`${API_BASE}/posiciones/${id}`)
       .then(res => res.json())
       .then(pos => {
-        // Cargar todo el historial de ese bus
         fetch(`${API_BASE}/buses/${pos.id_bus}/posiciones`)
           .then(res => res.json())
           .then(historial => {
-            console.log("Historial recibido:", historial); // 👀 Ver en consola
+            console.log("Historial recibido:", historial);
             const coords = [];
             historial.forEach(p => {
               const lat = parseFloat(p.latitud);
@@ -338,6 +325,7 @@ $('#tablaPosiciones').on('click', '.verMapa', function() {
       .catch(err => console.error("Error cargando recorrido:", err));
   }, 500);
 });
+
 
 });
 </script>
