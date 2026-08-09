@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Gestión de Paradas - SmartCampusGuide</title>
+  <title>Gestión de Posiciones - SmartCampusGuide</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -43,8 +43,8 @@
     <div class="collapse navbar-collapse" id="menuPrincipal">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item"><a class="nav-link" href="rutas.html">Rutas</a></li>
-        <li class="nav-item"><a class="nav-link active" href="paradas.html">Paradas</a></li>
-        <li class="nav-item"><a class="nav-link" href="posiciones.html">Posiciones</a></li>
+        <li class="nav-item"><a class="nav-link" href="paradas.html">Paradas</a></li>
+        <li class="nav-item"><a class="nav-link active" href="posiciones.html">Posiciones</a></li>
       </ul>
     </div>
   </div>
@@ -55,18 +55,18 @@
   <a href="transporteescolar.html" class="btn btn-gradient btn-gradient-green shadow-lg">🚍 Transporte Escolar</a>
   <a href="buses.html" class="btn btn-gradient btn-gradient-blue shadow-lg">🚌 Buses</a>
   <a href="rutas.html" class="btn btn-gradient btn-gradient-orange shadow-lg">🛣️ Rutas</a>
-  <a href="paradas.html" class="btn btn-gradient btn-gradient-purple shadow-lg">📍 Paradas</a>
+  <a href="posiciones.html" class="btn btn-gradient btn-gradient-purple shadow-lg">📍 Posiciones</a>
 </div>
 
 <div class="container mt-4">
-  <h2 class="mb-4">Gestión de Paradas</h2>
+  <h2 class="mb-4">Gestión de Posiciones</h2>
 
   <!-- Mini-dashboard -->
   <div class="row text-center mb-4">
     <div class="col-md-4">
       <div class="card bg-success text-white">
         <div class="card-body">
-          <h5>Total Paradas</h5>
+          <h5>Total Posiciones</h5>
           <p class="fs-4" id="metricTotal">0</p>
         </div>
       </div>
@@ -74,96 +74,62 @@
     <div class="col-md-4">
       <div class="card bg-info text-dark">
         <div class="card-body">
-          <h5>Promedio por Ruta</h5>
-          <p class="fs-4" id="metricPromedio">0</p>
+          <h5>Promedio Velocidad</h5>
+          <p class="fs-4" id="metricPromedio">0 km/h</p>
         </div>
       </div>
     </div>
     <div class="col-md-4">
       <div class="card bg-warning text-dark">
         <div class="card-body">
-          <h5>Última Parada Añadida</h5>
+          <h5>Última Actualización</h5>
           <p class="fs-4" id="metricUltima">-</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Leyenda elegante -->
-  <div class="alert alert-info d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 shadow-sm">
-    <div class="mb-2 mb-md-0">
-      <span class="badge bg-primary me-2">Ruta 1</span> UNGE → Aeropuerto → Nuevo Campus (Basupu)
-    </div>
-    <div>
-      <span class="badge bg-success me-2">Ruta 2</span> UNGE → Avenida Hassan II → Carretera Luba → Nuevo Campus
-    </div>
-  </div>
-
-  <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#modalParada">➕ Nueva Parada</button>
-
   <!-- Tabla -->
-  <table id="tablaParadas" class="display table table-striped table-bordered nowrap" style="width:100%">
+  <table id="tablaPosiciones" class="display table table-striped table-bordered nowrap" style="width:100%">
     <thead class="table-dark">
       <tr>
-        <th>ID Parada</th>
-        <th>Ruta</th>
-        <th>Nombre</th>
+        <th>ID Posición</th>
+        <th>ID Bus</th>
         <th>Latitud</th>
         <th>Longitud</th>
-        <th>Orden</th>
+        <th>Velocidad</th>
+        <th>Timestamp</th>
         <th>Acciones</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
-
-  <!-- Gráfica distribución -->
-  <div class="card mt-4">
-    <div class="card-header">📊 Distribución de Paradas por Ruta</div>
-    <div class="card-body">
-      <canvas id="graficaParadas"></canvas>
+<!-- Modal Detalle Posición -->
+<div class="modal fade" id="modalPosicion" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Detalle de Posición</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="mapPosiciones" style="height:500px;"></div>
+      </div>
     </div>
+  </div>
+</div>
+
+<!-- Gráfica de actividad -->
+<div class="card mt-4">
+  <div class="card-header">📊 Actividad de Posiciones</div>
+  <div class="card-body">
+    <canvas id="graficaPosiciones"></canvas>
   </div>
 </div>
 
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS - UNGE © IoT A NUESTRO ALCANCE - 2026
 </footer>
-<!-- Modal Crear/Editar Parada -->
-<div class="modal fade" id="modalParada" tabindex="-1">
-  <div class="modal-dialog">
-    <form id="formParada" class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Nueva Parada</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="paradaId">
-        <div class="mb-3"><label class="form-label">Ruta</label><input type="number" id="idRuta" class="form-control" required></div>
-        <div class="mb-3"><label class="form-label">Nombre</label><input type="text" id="nombre" class="form-control" required></div>
-        <div class="mb-3"><label class="form-label">Latitud</label><input type="text" id="latitud" class="form-control" required></div>
-        <div class="mb-3"><label class="form-label">Longitud</label><input type="text" id="longitud" class="form-control" required></div>
-        <div class="mb-3"><label class="form-label">Orden</label><input type="number" id="orden" class="form-control" required></div>
-      </div>
-      <div class="modal-footer"><button type="submit" class="btn btn-primary">Guardar</button></div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal Mapa -->
-<div class="modal fade" id="modalMapa" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Mapa de Ruta</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div id="map" style="height:500px;"></div>
-      </div>
-    </div>
-  </div>
-</div>
 <!-- JS -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
@@ -178,7 +144,7 @@
 $(document).ready(function() {
   const API_BASE = "https://smarcampus.onrender.com/transporteescolar";
 
-  const tablaParadas = $('#tablaParadas').DataTable({
+  const tablaPosiciones = $('#tablaPosiciones').DataTable({
     dom: '<"top"fB>rt<"bottom"lip>',
     buttons: [
       { extend: 'csv', text: '⬇️ CSV' },
@@ -189,142 +155,75 @@ $(document).ready(function() {
     language: {
       search: "🔍 Buscar:",
       lengthMenu: "Mostrar _MENU_ registros",
-      info: "Mostrando _START_ a _END_ de _TOTAL_ paradas"
+      info: "Mostrando _START_ a _END_ de _TOTAL_ posiciones"
     }
   });
 
-  // Cargar paradas
-  function cargarParadas() {
-    fetch(`${API_BASE}/paradas`)
+  // Cargar posiciones
+  function cargarPosiciones() {
+    fetch(`${API_BASE}/posiciones`)
       .then(res => res.json())
       .then(data => {
-        tablaParadas.clear();
-        let rutasCount = {};
+        tablaPosiciones.clear();
+        let totalVelocidad = 0;
         data.forEach(p => {
-          tablaParadas.row.add([
-            p.id_parada,
-            p.id_ruta,
-            p.nombre,
+          tablaPosiciones.row.add([
+            p.id_posicion,
+            p.id_bus,
             p.latitud,
             p.longitud,
-            p.orden,
-            `
-              <button class="btn btn-sm btn-info verMapa" data-ruta="${p.id_ruta}">🗺️ Ruta</button>
-              <button class="btn btn-sm btn-warning editar" data-id="${p.id_parada}">✏️ Editar</button>
-              <button class="btn btn-sm btn-danger eliminar" data-id="${p.id_parada}">🗑️ Eliminar</button>
-            `
+            p.velocidad,
+            p.timestamp,
+            `<button class="btn btn-sm btn-info verMapa" data-id="${p.id_posicion}">🗺️ Ver</button>`
           ]);
-          rutasCount[p.id_ruta] = (rutasCount[p.id_ruta] || 0) + 1;
+          totalVelocidad += p.velocidad || 0;
         });
-        tablaParadas.draw();
+        tablaPosiciones.draw();
 
         // métricas rápidas
         document.getElementById("metricTotal").textContent = data.length;
-        const rutas = Object.keys(rutasCount).length;
-        document.getElementById("metricPromedio").textContent = rutas ? (data.length / rutas).toFixed(1) : 0;
-        document.getElementById("metricUltima").textContent = data.length ? data[data.length-1].nombre : "-";
+        document.getElementById("metricPromedio").textContent = (totalVelocidad / (data.length||1)).toFixed(1) + " km/h";
+        document.getElementById("metricUltima").textContent = data.length ? data[data.length-1].timestamp : "-";
 
-        // gráfica distribución
-        const ctx = document.getElementById('graficaParadas').getContext('2d');
-        if(window.graficaParadas) window.graficaParadas.destroy();
-        window.graficaParadas = new Chart(ctx, {
-          type: 'bar',
+        // gráfica actividad
+        const ctx = document.getElementById('graficaPosiciones').getContext('2d');
+        if(window.graficaPosiciones) window.graficaPosiciones.destroy();
+        window.graficaPosiciones = new Chart(ctx, {
+          type: 'line',
           data: {
-            labels: Object.keys(rutasCount),
+            labels: data.map(p => p.timestamp),
             datasets: [{
-              label: 'Número de Paradas',
-              data: Object.values(rutasCount),
-              backgroundColor: 'rgba(0, 64, 128, 0.7)'
+              label: 'Velocidad (km/h)',
+              data: data.map(p => p.velocidad || 0),
+              borderColor: 'rgba(0, 64, 128, 0.7)',
+              fill: false
             }]
           },
           options: { responsive: true }
         });
       })
-      .catch(err => console.error("Error cargando paradas:", err));
+      .catch(err => console.error("Error cargando posiciones:", err));
   }
-  cargarParadas();
+  cargarPosiciones();
 
-  // Guardar parada
-  $('#formParada').submit(function(e) {
-    e.preventDefault();
-    const id = $('#paradaId').val();
-    const parada = {
-      id_ruta: $('#idRuta').val(),
-      nombre: $('#nombre').val(),
-      latitud: $('#latitud').val(),
-      longitud: $('#longitud').val(),
-      orden: $('#orden').val()
-    };
-    const metodo = id ? 'PUT' : 'POST';
-    const url = id ? `${API_BASE}/paradas/${id}` : `${API_BASE}/paradas`;
-
-    fetch(url, {
-      method: metodo,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(parada)
-    })
-    .then(res => res.json())
-    .then(() => {
-      bootstrap.Modal.getInstance(document.getElementById('modalParada')).hide();
-      cargarParadas();
-    })
-    .catch(err => console.error("Error guardando parada:", err));
-  });
-
-  // Editar parada
-  $('#tablaParadas').on('click', '.editar', function() {
+  // Ver mapa de posición
+  $('#tablaPosiciones').on('click', '.verMapa', function() {
     const id = $(this).data('id');
-    fetch(`${API_BASE}/paradas/${id}`)
-      .then(res => res.json())
-      .then(p => {
-        $('#paradaId').val(p.id_parada);
-        $('#idRuta').val(p.id_ruta);
-        $('#nombre').val(p.nombre);
-        $('#latitud').val(p.latitud);
-        $('#longitud').val(p.longitud);
-        $('#orden').val(p.orden);
-        $('.modal-title').text("Editar Parada");
-        $('#modalParada').modal('show');
-      })
-      .catch(err => console.error("Error cargando parada:", err));
-  });
-
-  // Eliminar parada
-  $('#tablaParadas').on('click', '.eliminar', function() {
-    const id = $(this).data('id');
-    if(confirm("¿Seguro que deseas eliminar esta parada?")) {
-      fetch(`${API_BASE}/paradas/${id}`, { method: 'DELETE' })
-        .then(() => cargarParadas())
-        .catch(err => console.error("Error eliminando parada:", err));
-    }
-  });
-
-  // Ver mapa de ruta completa
-  $('#tablaParadas').on('click', '.verMapa', function() {
-    const idRuta = $(this).data('ruta');
-    $('#modalMapa').modal('show');
+    $('#modalPosicion').modal('show');
 
     setTimeout(() => {
-      const map = L.map('map').setView([3.75, 8.78], 13);
+      const map = L.map('mapPosiciones').setView([3.75, 8.78], 13);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      fetch(`${API_BASE}/rutas/${idRuta}/paradas`)
+      fetch(`${API_BASE}/posiciones/${id}`)
         .then(res => res.json())
-        .then(paradas => {
-          const coords = [];
-          paradas.forEach(p => {
-            L.marker([p.latitud, p.longitud]).addTo(map)
-              .bindPopup(`<b>${p.nombre}</b><br>Orden: ${p.orden}`);
-            coords.push([p.latitud, p.longitud]);
-          });
-          if (coords.length > 1) {
-            L.polyline(coords, {color: 'blue'}).addTo(map);
-            map.fitBounds(coords);
-          }
+        .then(pos => {
+          L.marker([pos.latitud, pos.longitud]).addTo(map)
+            .bindPopup(`<b>Bus ${pos.id_bus}</b><br>Velocidad: ${pos.velocidad} km/h<br>${pos.timestamp}`);
         })
-        .catch(err => console.error("Error cargando paradas de ruta:", err));
+        .catch(err => console.error("Error cargando posición:", err));
     }, 500);
   });
 });
