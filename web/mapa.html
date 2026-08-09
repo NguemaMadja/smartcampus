@@ -33,9 +33,10 @@
       border-radius: 4px;
       font-size: 12px;
     }
-    /* Modo presentación */
+    /* Modo presentación centrado */
     #modoPresentacion {
-      position: fixed; top: 10px; right: 10px; z-index: 3000;
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      z-index: 3000; font-size: 18px; padding: 10px 20px;
     }
   </style>
 </head>
@@ -128,7 +129,7 @@
   <div id="map"></div>
 </div>
 
-<!-- Botón modo presentación -->
+<!-- Botón modo presentación centrado -->
 <button id="modoPresentacion" class="btn btn-warning">🖥️ Modo Presentación</button>
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS -UNGE- @ IoT A NUESTRO ALCANCE - 2026
@@ -283,6 +284,30 @@
       mostrarToast("⚠️ Edificio no encontrado");
     }
   }
+  // Botón buscar
+  document.getElementById("btnBuscar").addEventListener("click", () => {
+    buscarEdificio(document.getElementById("searchBar").value);
+  });
+
+  // Autocompletado
+  document.getElementById("searchBar").addEventListener("input", e => {
+    const val = e.target.value.toLowerCase();
+    const list = document.getElementById("autocompleteList");
+    list.innerHTML = "";
+    if(val.length > 1){
+      edificiosData.filter(ed => ed.nombre.toLowerCase().includes(val)).forEach(ed => {
+        const div = document.createElement("div");
+        div.textContent = ed.nombre;
+        div.onclick = () => {
+          document.getElementById("searchBar").value = ed.nombre;
+          list.innerHTML = "";
+          buscarEdificio(ed.nombre);
+        };
+        list.appendChild(div);
+      });
+    }
+  });
+
   // Métricas simuladas + mapa de calor
   let heatLayer = L.heatLayer([], {radius:25, blur:15, maxZoom:17}).addTo(map);
 
