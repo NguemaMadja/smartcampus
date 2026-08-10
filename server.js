@@ -2826,9 +2826,8 @@ app.get('/videoclases', async (req, res) => {
       const inicio = new Date(clase.fecha_inicio);
       const fin = clase.fecha_fin ? new Date(clase.fecha_fin) : null;
 
+      // Recalcular estado dinámicamente
       let estadoCalculado = clase.estado;
-
-      // Solo recalculamos si no está cancelada
       if (clase.estado !== 'CANCELADA') {
         if (ahora >= inicio && (!fin || ahora <= fin)) {
           estadoCalculado = 'EN_CURSO';
@@ -2839,7 +2838,12 @@ app.get('/videoclases', async (req, res) => {
         }
       }
 
-      return { ...clase, estado: estadoCalculado };
+      return {
+        ...clase,
+        fecha_inicio: inicio.toISOString().slice(0,19), // "YYYY-MM-DDTHH:mm:ss" sin Z
+        fecha_fin: fin ? fin.toISOString().slice(0,19) : null,
+        estado: estadoCalculado
+      };
     });
 
     res.json(clases);
@@ -2860,7 +2864,13 @@ app.post('/videoclases', async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
       [titulo, descripcion, profesor_id, fecha_inicio, fecha_fin, enlace, invitados, estado]
     );
-    res.json(result.rows[0]);
+
+    const clase = result.rows[0];
+    // Normalizar fechas
+    clase.fecha_inicio = new Date(clase.fecha_inicio).toISOString().slice(0,19);
+    clase.fecha_fin = clase.fecha_fin ? new Date(clase.fecha_fin).toISOString().slice(0,19) : null;
+
+    res.json(clase);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error creando videoclase' });
@@ -2879,7 +2889,13 @@ app.put('/videoclases/:id', async (req, res) => {
       [titulo, descripcion, fecha_inicio, fecha_fin, estado, invitados, id]
     );
     if(result.rows.length === 0) return res.status(404).json({ error: 'Videoclase no encontrada' });
-    res.json(result.rows[0]);
+
+    const clase = result.rows[0];
+    // Normalizar fechas
+    clase.fecha_inicio = new Date(clase.fecha_inicio).toISOString().slice(0,19);
+    clase.fecha_fin = clase.fecha_fin ? new Date(clase.fecha_fin).toISOString().slice(0,19) : null;
+
+    res.json(clase);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error actualizando videoclase' });
@@ -2898,6 +2914,7 @@ app.delete('/videoclases/:id', async (req, res) => {
     res.status(500).json({ error: 'Error eliminando videoclase' });
   }
 });
+
 
 
 
