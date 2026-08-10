@@ -1235,7 +1235,6 @@ app.delete('/asignaturas/:id', async (req, res) => {
 });
 
 
-
 // ---------------- TIPOS DE SENSORES CRUD ----------------
 app.get('/tipos_sensores', async (req, res) => {
   try {
