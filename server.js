@@ -2820,7 +2820,29 @@ app.post('/transporteescolar', async (req, res) => {
 app.get('/videoclases', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM videoclases ORDER BY fecha_inicio ASC');
-    res.json(result.rows);
+    const ahora = new Date();
+
+    const clases = result.rows.map(clase => {
+      const inicio = new Date(clase.fecha_inicio);
+      const fin = clase.fecha_fin ? new Date(clase.fecha_fin) : null;
+
+      let estadoCalculado = clase.estado;
+
+      // Solo recalculamos si no está cancelada
+      if (clase.estado !== 'CANCELADA') {
+        if (ahora >= inicio && (!fin || ahora <= fin)) {
+          estadoCalculado = 'EN_CURSO';
+        } else if (fin && ahora > fin) {
+          estadoCalculado = 'FINALIZADA';
+        } else if (ahora < inicio) {
+          estadoCalculado = 'PROGRAMADA';
+        }
+      }
+
+      return { ...clase, estado: estadoCalculado };
+    });
+
+    res.json(clases);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error obteniendo videoclases' });
@@ -2876,6 +2898,7 @@ app.delete('/videoclases/:id', async (req, res) => {
     res.status(500).json({ error: 'Error eliminando videoclase' });
   }
 });
+
 
 
 
