@@ -65,7 +65,6 @@
     <tbody></tbody>
   </table>
 </div>
-
 <!-- Modal Registrar Sensor -->
 <div class="modal fade" id="modalAgregar" tabindex="-1">
   <div class="modal-dialog">
@@ -128,10 +127,10 @@
     </div>
   </div>
 </div>
+
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS -UNGE- @ IoT A NUESTRO ALCANCE - 2026
 </footer>
-
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
@@ -147,9 +146,9 @@
       buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
     });
     const tablaTipos = $('#tablaTipos').DataTable();
-    let grafico; // variable global para Chart.js
+    let grafico;
 
-    // Cargar sensores
+    // Función para cargar sensores
     function cargarSensores(){
       fetch("/sensores")
         .then(res => res.json())
@@ -172,6 +171,9 @@
           tablaSensores.draw();
         });
     }
+
+    // Auto-refresh cada 20 segundos
+    setInterval(cargarSensores, 20000);
 
     // Cargar tipos
     function cargarTipos(){
@@ -283,7 +285,7 @@
       }
     });
 
-    // Mostrar gráfico
+    // Mostrar gráfico por cada sensor
     $('#tablaSensores').on('click','.btnGrafico', function(){
       const id = $(this).data('id');
       fetch(`/sensores/${id}/historial`)
@@ -296,7 +298,7 @@
             data: {
               labels: data.map(d => d.fecha + " " + d.hora),
               datasets: [{
-                label: 'Valores del Sensor',
+                label: 'Valores del Sensor ' + id,
                 data: data.map(d => d.valor),
                 borderColor: 'rgba(0,64,128,0.85)',
                 fill: false
