@@ -1934,9 +1934,10 @@ cron.schedule('0 8 * * MON', async () => {
   }
 });
 
+
 // ---------------- MÉTRICAS WIFI ----------------
 
-// Métricas WiFi - listado con filtros opcionales
+// Listado con filtros opcionales
 app.get('/metricaswifi', async (req, res) => {
   try {
     const { fechaInicio, fechaFin, idAula } = req.query;
@@ -1965,24 +1966,87 @@ app.get('/metricaswifi', async (req, res) => {
     query += ` ORDER BY fecha ASC`;
 
     const result = await pool.query(query, params);
-
-    await registrarAccion({
-      id_usuario: null,
-      accion: 'CONSULTAR',
-      modulo: 'WiFi',
-      detalle: 'Consulta de métricas WiFi',
-      dispositivo: 'Web',
-      ip: req.ip,
-      resultado: 'OK',
-      duracion_segundos: 0
-    });
-
     res.json(result.rows);
   } catch (err) {
-    console.error("Error en /metricaswifi:", err);
+    console.error("Error en GET /metricaswifi:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
+// Insertar métricas WiFi (para ESP32)
+app.post('/metricaswifi', async (req, res) => {
+  try {
+    const { id_aula, usuarios_conectados, ancho_banda, latencia, jitter, perdida_paquetes, nivel_senal } = req.body;
+
+    const query = `
+      INSERT INTO metricaswifi (id_aula, usuarios_conectados, ancho_banda, latencia, jitter, perdida_paquetes, nivel_senal, fecha)
+      VALUES ($1,$2,$3,$4,$5,$6,$7, CURRENT_DATE)
+      RETURNING *;
+    `;
+
+    const values = [id_aula, usuarios_conectados, ancho_banda, latencia, jitter, perdida_paquetes, nivel_senal];
+    const result = await pool.query(query, values);
+
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error("Error en POST /metricaswifi:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Actualizar métricas WiFi por ID
+app.put('/metricaswifi/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { id_aula, usuarios_conectados, ancho_banda, latencia, jitter, perdida_paquetes, nivel_senal } = req.body;
+
+    const query = `
+      UPDATE metricaswifi
+      SET id_aula = $1,
+          usuarios_conectados = $2,
+          ancho_banda = $3,
+          latencia = $4,
+          jitter = $5,
+          perdida_paquetes = $6,
+          nivel_senal = $7
+      WHERE id_wifi = $8
+      RETURNING *;
+    `;
+
+    const values = [id_aula, usuarios_conectados, ancho_banda, latencia, jitter, perdida_paquetes, nivel_senal, id];
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Métrica WiFi no encontrada" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Error en PUT /metricaswifi/:id:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Eliminar métricas WiFi por ID
+app.delete('/metricaswifi/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const query = `DELETE FROM metricaswifi WHERE id_wifi = $1 RETURNING *;`;
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Métrica WiFi no encontrada" });
+    }
+
+    res.json({ message: "Métrica WiFi eliminada correctamente", deleted: result.rows[0] });
+  } catch (err) {
+    console.error("Error en DELETE /metricaswifi/:id:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 
 // ==================== MÓDULO HUELLA ====================
 
