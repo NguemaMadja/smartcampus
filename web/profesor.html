@@ -19,9 +19,12 @@
       padding: 15px;
       font-size: 1.5rem;
       font-weight: bold;
+      position: relative;
     }
     header button {
-      float: right;
+      position: absolute;
+      right: 20px;
+      top: 10px;
     }
     .card {
       margin-top: 20px;
@@ -47,7 +50,7 @@
   <!-- Cabecera -->
   <header>
     Panel del Profesor - SmartCampusGuide
-    <button class="btn btn-danger ms-3" onclick="cerrarSesion()">
+    <button class="btn btn-danger" onclick="cerrarSesion()">
       <i class="bi bi-box-arrow-right me-1"></i> Cerrar Sesión
     </button>
   </header>
@@ -56,8 +59,7 @@
     <div class="card">
       <div class="card-header">Video Clases</div>
       <div class="card-body">
-        <button class="btn btn-primary" onclick="cargarVideoclases()">Ver videoclases</button>
-        <ul id="listaVideoclases" class="mt-3"></ul>
+        <a href="videoclases.html" class="btn btn-primary">Ir a videoclases</a>
       </div>
     </div>
 
@@ -65,8 +67,7 @@
     <div class="card">
       <div class="card-header">Sensores</div>
       <div class="card-body">
-        <button class="btn btn-success" onclick="cargarSensores()">Ver resultados</button>
-        <ul id="listaSensores" class="mt-3"></ul>
+        <a href="sensores.html" class="btn btn-success">Ver resultados</a>
       </div>
     </div>
 
@@ -74,8 +75,7 @@
     <div class="card">
       <div class="card-header">Métricas WiFi</div>
       <div class="card-body">
-        <button class="btn btn-info" onclick="cargarMetricas()">Ver métricas</button>
-        <ul id="listaMetricas" class="mt-3"></ul>
+        <a href="metricaswifi.html" class="btn btn-info">Ver métricas</a>
       </div>
     </div>
 
@@ -83,8 +83,7 @@
     <div class="card">
       <div class="card-header">Radio UNGE</div>
       <div class="card-body">
-        <button class="btn btn-warning" onclick="cargarRadio()">Sintonizar programas</button>
-        <ul id="listaRadio" class="mt-3"></ul>
+        <a href="radiounge.html" class="btn btn-warning">Sintonizar programas</a>
       </div>
     </div>
 
@@ -92,8 +91,7 @@
     <div class="card">
       <div class="card-header">Transporte Escolar</div>
       <div class="card-body">
-        <button class="btn btn-secondary" onclick="cargarTransporte()">Ver rutas y buses</button>
-        <ul id="listaTransporte" class="mt-3"></ul>
+        <a href="transporteescolar.html" class="btn btn-secondary">Ver rutas y buses</a>
       </div>
     </div>
 
@@ -101,8 +99,7 @@
     <div class="card">
       <div class="card-header">Mapa del Campus</div>
       <div class="card-body">
-        <button class="btn btn-dark" onclick="cargarMapa()">Abrir mapa</button>
-        <div id="mapaContainer" class="mt-3"></div>
+        <a href="mapa.html" class="btn btn-dark">Abrir mapa</a>
       </div>
     </div>
   </div>
@@ -118,73 +115,6 @@
         sessionStorage.clear();
         window.location.href = "index.html";
       }
-    }
-
-    async function cargarVideoclases() {
-      const res = await fetch("/videoclases");
-      const data = await res.json();
-      const lista = document.getElementById("listaVideoclases");
-      lista.innerHTML = "";
-      data.forEach(v => {
-        const li = document.createElement("li");
-        li.textContent = `${v.titulo} - ${v.profesor}`;
-        lista.appendChild(li);
-      });
-    }
-
-    async function cargarSensores() {
-      const res = await fetch("/sensores");
-      const data = await res.json();
-      const lista = document.getElementById("listaSensores");
-      lista.innerHTML = "";
-      data.forEach(s => {
-        const li = document.createElement("li");
-        li.textContent = `${s.tipo}: ${s.valor} (${s.unidad})`;
-        lista.appendChild(li);
-      });
-    }
-
-    async function cargarMetricas() {
-      const res = await fetch("/metricaswifi");
-      const data = await res.json();
-      const lista = document.getElementById("listaMetricas");
-      lista.innerHTML = "";
-      data.forEach(m => {
-        const li = document.createElement("li");
-        li.textContent = `${m.ssid} - ${m.intensidad} dBm`;
-        lista.appendChild(li);
-      });
-    }
-
-    async function cargarRadio() {
-      const res = await fetch("/radiounge");
-      const data = await res.json();
-      const lista = document.getElementById("listaRadio");
-      lista.innerHTML = "";
-      data.forEach(r => {
-        const li = document.createElement("li");
-        li.textContent = `${r.programa} - ${r.hora}`;
-        lista.appendChild(li);
-      });
-    }
-
-    async function cargarTransporte() {
-      const res = await fetch("/transporteescolar");
-      const data = await res.json();
-      const lista = document.getElementById("listaTransporte");
-      lista.innerHTML = "";
-      data.forEach(t => {
-        const li = document.createElement("li");
-        li.textContent = `Bus ${t.bus} - Ruta ${t.ruta} - Posición ${t.posicion}`;
-        lista.appendChild(li);
-      });
-    }
-
-    async function cargarMapa() {
-      const res = await fetch("/mapa");
-      const data = await res.json();
-      const cont = document.getElementById("mapaContainer");
-      cont.innerHTML = `<p>Mapa cargado con ${data.lugares.length} lugares disponibles.</p>`;
     }
   </script>
 
