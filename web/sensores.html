@@ -13,6 +13,8 @@
     .btn-rounded { border-radius: 20px; }
     #graficoSensor { height: 400px; }
     .card-header { background-color: rgba(0, 64, 128, 0.85); color: white; }
+    .alert-critical { background-color: rgba(255, 99, 132, 0.2); }
+    .alert-warning { background-color: rgba(255, 206, 86, 0.2); }
   </style>
 </head>
 <body>
@@ -46,12 +48,26 @@
     <a href="estadisticas.html" class="btn btn-primary btn-rounded">Ir al Módulo Estadísticas ➡️</a>
   </div>
   <h2>Datos de Sensores</h2>
+
+  <!-- Resumen ejecutivo -->
+  <div id="resumenEjecutivo" class="alert alert-info mb-4">
+    <strong>Sensores activos:</strong> <span id="totalSensores">0</span> |
+    <strong>Alertas críticas:</strong> <span id="alertasCriticas">0</span> |
+    <strong>Última actualización:</strong> <span id="ultimaActualizacion">-</span>
+  </div>
+
+  <!-- Panel de riesgos -->
+  <div id="panelRiesgos" class="alert alert-danger mb-4" style="display:none;">
+    <h5>Sensores en estado crítico:</h5>
+    <ul id="listaRiesgos"></ul>
+  </div>
+
   <div class="mb-3">
     <button class="btn btn-success btn-rounded" data-bs-toggle="modal" data-bs-target="#modalAgregar">➕ Registrar Sensor</button>
     <button class="btn btn-info btn-rounded" data-bs-toggle="modal" data-bs-target="#modalTipos">⚙️ Gestionar Tipos de Sensores</button>
   </div>
 
-  <!-- Contenedor para tarjetas explicativas -->
+  <!-- Tarjetas explicativas -->
   <div id="tarjetasSensores" class="row mb-4"></div>
 
   <!-- Tabla -->
@@ -72,67 +88,42 @@
   </table>
 </div>
 
-<!-- Modal Registrar Sensor -->
+<!-- Modales (Registrar, Tipos, Gráfico) -->
 <div class="modal fade" id="modalAgregar" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Registrar Sensor</h5></div>
-      <div class="modal-body">
-        <form id="formAgregar">
-          <div class="mb-3">
-            <label class="form-label">Tipo</label>
-            <select class="form-select" id="tipo"></select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Aula</label>
-            <select class="form-select" id="aula"></select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Ubicación</label>
-            <input type="text" class="form-control" id="ubicacion">
-          </div>
-          <button type="submit" class="btn btn-primary btn-rounded">Guardar</button>
-        </form>
-      </div>
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Registrar Sensor</h5></div>
+    <div class="modal-body">
+      <form id="formAgregar">
+        <div class="mb-3"><label class="form-label">Tipo</label><select class="form-select" id="tipo"></select></div>
+        <div class="mb-3"><label class="form-label">Aula</label><select class="form-select" id="aula"></select></div>
+        <div class="mb-3"><label class="form-label">Ubicación</label><input type="text" class="form-control" id="ubicacion"></div>
+        <button type="submit" class="btn btn-primary btn-rounded">Guardar</button>
+      </form>
     </div>
-  </div>
+  </div></div>
 </div>
 
-<!-- Modal Tipos de Sensores -->
 <div class="modal fade" id="modalTipos" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Gestionar Tipos de Sensores</h5></div>
-      <div class="modal-body">
-        <form id="formTipo" class="mb-3 d-flex">
-          <input type="text" class="form-control me-2" id="nuevoTipo" placeholder="Nuevo tipo de sensor">
-          <button type="submit" class="btn btn-success btn-rounded">➕ Añadir</button>
-        </form>
-        <table id="tablaTipos" class="table table-striped table-bordered">
-          <thead class="table-dark">
-            <tr>
-              <th>ID Tipo</th>
-              <th>Nombre</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Gestionar Tipos de Sensores</h5></div>
+    <div class="modal-body">
+      <form id="formTipo" class="mb-3 d-flex">
+        <input type="text" class="form-control me-2" id="nuevoTipo" placeholder="Nuevo tipo de sensor">
+        <button type="submit" class="btn btn-success btn-rounded">➕ Añadir</button>
+      </form>
+      <table id="tablaTipos" class="table table-striped table-bordered">
+        <thead class="table-dark"><tr><th>ID Tipo</th><th>Nombre</th><th>Acciones</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
-  </div>
+  </div></div>
 </div>
 
-<!-- Modal Gráfico -->
 <div class="modal fade" id="modalGrafico" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Gráfico del Sensor</h5></div>
-      <div class="modal-body">
-        <canvas id="graficoSensor"></canvas>
-      </div>
-    </div>
-  </div>
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Gráfico del Sensor</h5></div>
+    <div class="modal-body"><canvas id="graficoSensor"></canvas></div>
+  </div></div>
 </div>
 
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
@@ -150,7 +141,26 @@
   $(document).ready(function() {
     const tablaSensores = $('#tablaSensores').DataTable({
       dom: 'Bfrtip',
-      buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+      buttons: [
+        'copy', 'csv', 'excel', 'pdf',
+        {
+          extend: 'print',
+          text: 'Imprimir con interpretación',
+          action: function (e, dt, node, config) {
+            const win = window.open('', '', 'height=800,width=1200');
+            win.document.write('<html><head><title>Reporte de Sensores</title></head><body>');
+            win.document.write('<h2>Resumen Ejecutivo</h2>');
+            win.document.write($('#resumenEjecutivo')[0].outerHTML);
+            win.document.write('<h2>Panel de Riesgos</h2>');
+            win.document.write($('#panelRiesgos')[0].outerHTML);
+            win.document.write('<h2>Tabla de Sensores</h2>');
+            win.document.write($('#tablaSensores').clone()[0].outerHTML);
+            win.document.write('</body></html>');
+            win.document.close();
+            win.print();
+          }
+        }
+      ]
     });
     const tablaTipos = $('#tablaTipos').DataTable();
     let grafico;
@@ -176,19 +186,46 @@
             ]).draw(false);
           });
 
-          // Actualizar tarjetas explicativas con el último registro de cada sensor
+          // Actualizar tarjetas explicativas
           actualizarTarjetas(data);
+
+          // Actualizar resumen ejecutivo
+          $('#totalSensores').text(data.length);
+          $('#ultimaActualizacion').text(new Date().toLocaleString());
+
+          // Panel de riesgos
+          const riesgos = data.filter(s => esCritico(s));
+          if (riesgos.length > 0) {
+            $('#panelRiesgos').show();
+            $('#alertasCriticas').text(riesgos.length);
+            $('#listaRiesgos').empty();
+            riesgos.forEach(r => {
+              $('#listaRiesgos').append(`<li>${r.tipo} en Aula ${r.aula} (Valor: ${r.valor})</li>`);
+            });
+          } else {
+            $('#panelRiesgos').hide();
+            $('#alertasCriticas').text(0);
+          }
         })
         .catch(err => console.error("Error cargando sensores:", err));
     }
 
+    // Función para determinar si un sensor está en estado crítico
+    function esCritico(sensor){
+      if(sensor.tipo.toLowerCase().includes("temperatura") && sensor.valor > 30) return true;
+      if(sensor.tipo.toLowerCase().includes("pir") && sensor.valor === "Movimiento") return true;
+      if(sensor.tipo.toLowerCase().includes("humedad") && sensor.valor > 80) return true;
+      return false;
+    }
+
     // Función para actualizar tarjetas explicativas
     function actualizarTarjetas(data){
-      $('#tarjetasSensores').empty(); // limpiar tarjetas previas
+      $('#tarjetasSensores').empty();
       data.forEach(s => {
+        const estado = esCritico(s) ? 'alert-critical' : '';
         const tarjeta = `
           <div class="col-md-3 mb-3">
-            <div class="card text-center">
+            <div class="card text-center ${estado}">
               <div class="card-header">${s.tipo} (ID ${s.id_sensor})</div>
               <div class="card-body">
                 <h5>${s.valor || "-"}</h5>
