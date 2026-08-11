@@ -91,31 +91,14 @@ app.post('/login', async (req, res) => {
 // ---------------- Middleware de Roles ----------------
 function verificarRol(rolesPermitidos) {
   return (req, res, next) => {
-    // 👇 El rol lo recibimos desde headers o token
     const rol = req.headers["rol"]; 
     if (!rol || !rolesPermitidos.includes(rol)) {
       return res.status(403).json({ error: "Acceso denegado" });
     }
-    // Guardamos el rol en req.usuario para usarlo en la ruta
     req.usuario = { rol };
     next();
   };
 }
-
-// ---------------- Ejemplo de uso en rutas ----------------
-// Solo admin puede modificar configuración
-app.put("/configuracion", verificarRol(["admin"]), async (req, res) => {
-  // Aquí iría la lógica para actualizar configuración
-  res.json({ mensaje: "Configuración actualizada correctamente" });
-});
-
-// Admin y profesor pueden acceder a videoclases
-app.get("/videoclases", verificarRol(["admin", "profesor"]), async (req, res) => {
-  // Aquí iría la lógica para listar videoclases
-  res.json({ mensaje: "Listado de videoclases" });
-});
-
-
 
 // === Videoclases ===
 // Profesor: puede ver, crear y modificar, pero no eliminar
