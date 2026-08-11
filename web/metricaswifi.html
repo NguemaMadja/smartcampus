@@ -71,6 +71,47 @@
       </form>
     </div>
   </div>
+
+  <!-- Tarjetas explicativas -->
+  <div class="row mb-4" id="tarjetasMetricas">
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-header">Usuarios</div>
+        <div class="card-body"><h5 id="cardUsuarios">-</h5><p>Conectados</p></div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-header">Ancho Banda</div>
+        <div class="card-body"><h5 id="cardBanda">-</h5><p>Mbps</p></div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-header">Latencia</div>
+        <div class="card-body"><h5 id="cardLatencia">-</h5><p>ms</p></div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-header">Jitter</div>
+        <div class="card-body"><h5 id="cardJitter">-</h5><p>ms</p></div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-header">Pérdida</div>
+        <div class="card-body"><h5 id="cardPerdida">-</h5><p>%</p></div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-header">Señal</div>
+        <div class="card-body"><h5 id="cardSenal">-</h5><p>dBm</p></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Tabla -->
   <div class="card mb-4">
     <div class="card-header">Registros de Métricas WiFi</div>
@@ -172,6 +213,17 @@
           });
           tablaWifi.draw();
 
+          // Actualizar tarjetas con el último registro
+          if (data.length > 0) {
+            const ultimo = data[data.length - 1];
+            $('#cardUsuarios').text(ultimo.usuarios_conectados);
+            $('#cardBanda').text(ultimo.ancho_banda);
+            $('#cardLatencia').text(ultimo.latencia);
+            $('#cardJitter').text(ultimo.jitter);
+            $('#cardPerdida').text(ultimo.perdida_paquetes);
+            $('#cardSenal').text(ultimo.nivel_senal);
+          }
+
           // Gráfico Latencia/Jitter
           if (graficoLatencia) graficoLatencia.destroy();
           graficoLatencia = new Chart(document.getElementById('graficoLatencia'), {
@@ -197,6 +249,24 @@
               ]
             }
           });
+
+          // Configurar impresión para incluir gráficos
+          $.fn.dataTable.ext.buttons.print = {
+            extend: 'print',
+            text: 'Imprimir con gráficos',
+            action: function (e, dt, node, config) {
+              const win = window.open('', '', 'height=800,width=1200');
+              win.document.write('<html><head><title>Reporte WiFi</title></head><body>');
+              win.document.write('<h2>Registros de Métricas WiFi</h2>');
+              win.document.write($('#tablaWifi').clone()[0].outerHTML);
+              win.document.write('<h2>Gráficos</h2>');
+              win.document.write('<img src="' + graficoLatencia.toBase64Image() + '" style="width:100%;max-height:400px;"/>');
+              win.document.write('<img src="' + graficoVelocidad.toBase64Image() + '" style="width:100%;max-height:400px;"/>');
+              win.document.write('</body></html>');
+              win.document.close();
+              win.print();
+            }
+          };
         })
         .catch(err => console.error("Error cargando métricas WiFi:", err));
     }
