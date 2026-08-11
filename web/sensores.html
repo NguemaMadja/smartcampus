@@ -12,6 +12,7 @@
     .modal-header { background-color: rgba(0, 64, 128, 0.85); color: white; }
     .btn-rounded { border-radius: 20px; }
     #graficoSensor { height: 400px; }
+    .card-header { background-color: rgba(0, 64, 128, 0.85); color: white; }
   </style>
 </head>
 <body>
@@ -49,6 +50,11 @@
     <button class="btn btn-success btn-rounded" data-bs-toggle="modal" data-bs-target="#modalAgregar">➕ Registrar Sensor</button>
     <button class="btn btn-info btn-rounded" data-bs-toggle="modal" data-bs-target="#modalTipos">⚙️ Gestionar Tipos de Sensores</button>
   </div>
+
+  <!-- Contenedor para tarjetas explicativas -->
+  <div id="tarjetasSensores" class="row mb-4"></div>
+
+  <!-- Tabla -->
   <table id="tablaSensores" class="display table table-striped table-bordered" style="width:100%">
     <thead class="table-dark">
       <tr>
@@ -65,6 +71,7 @@
     <tbody></tbody>
   </table>
 </div>
+
 <!-- Modal Registrar Sensor -->
 <div class="modal fade" id="modalAgregar" tabindex="-1">
   <div class="modal-dialog">
@@ -153,7 +160,7 @@
       fetch("/sensores")
         .then(res => res.json())
         .then(data => {
-          tablaSensores.clear();
+          // Añadir nuevas filas sin limpiar la tabla (mantener historial)
           data.forEach(s => {
             tablaSensores.row.add([
               s.id_sensor,
@@ -166,149 +173,63 @@
               `<button class="btn btn-primary btn-sm btnGrafico" data-id="${s.id_sensor}">📊</button>
                <button class="btn btn-warning btn-sm btnEditar" data-id="${s.id_sensor}">✏️</button>
                <button class="btn btn-danger btn-sm btnEliminar" data-id="${s.id_sensor}">🗑️</button>`
-            ]);
+            ]).draw(false);
           });
-          tablaSensores.draw();
-        });
+
+          // Actualizar tarjetas explicativas con el último registro de cada sensor
+          actualizarTarjetas(data);
+        })
+        .catch(err => console.error("Error cargando sensores:", err));
     }
 
-    // Auto-refresh cada 20 segundos
-    setInterval(cargarSensores, 20000);
-
-    // Cargar tipos
-    function cargarTipos(){
-      fetch("/tipos_sensores")
-        .then(res => res.json())
-        .then(data => {
-          tablaTipos.clear();
-          data.forEach(t => {
-            tablaTipos.row.add([
-              t.id_tipo,
-              t.nombre,
-              `<button class="btn btn-danger btn-sm btnEliminarTipo" data-id="${t.id_tipo}">🗑️</button>`
-            ]);
-          });
-          tablaTipos.draw();
-
-          // llenar select de tipos
-          const select = document.getElementById("tipo");
-          select.innerHTML = "";
-          data.forEach(t => {
-            const opt = document.createElement("option");
-            opt.value = t.id_tipo;
-            opt.textContent = t.nombre;
-            select.appendChild(opt);
-          });
-        });
-    }
-
-    // Cargar aulas
-    function cargarAulas(){
-      fetch("/aulas")
-        .then(res => res.json())
-        .then(data => {
-          const select = document.getElementById("aula");
-          select.innerHTML = "";
-          data.forEach(a => {
-            const opt = document.createElement("option");
-            opt.value = a.id_aula;
-            opt.textContent = a.nombre;
-            select.appendChild(opt);
-          });
-        });
-    }
-
-    // Inicializar carga
-    cargarSensores();
-    cargarTipos();
-    cargarAulas();
-
-    // Registrar sensor
-    $('#formAgregar').on('submit', function(e){
-      e.preventDefault();
-      const nuevo = {
-        id_tipo: $('#tipo').val(),
-        id_aula: $('#aula').val(),
-        ubicacion: $('#ubicacion').val()
-      };
-      fetch("/sensores", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(nuevo)
-      }).then(()=> {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modalAgregar'));
-        modal.hide();
-        cargarSensores();
+    // Función para actualizar tarjetas explicativas
+    function actualizarTarjetas(data){
+      $('#tarjetasSensores').empty(); // limpiar tarjetas previas
+      data.forEach(s => {
+        const tarjeta = `
+          <div class="col-md-3 mb-3">
+            <div class="card text-center">
+              <div class="card-header">${s.tipo} (ID ${s.id_sensor})</div>
+              <div class="card-body">
+                <h5>${s.valor || "-"}</h5>
+                <p>Aula: ${s.aula}</p>
+                <p>Ubicación: ${s.ubicacion}</p>
+                <p>Fecha: ${s.fecha || "-"}</p>
+                <p>Hora: ${s.hora || "-"}</p>
+              </div>
+            </div>
+          </div>`;
+        $('#tarjetasSensores').append(tarjeta);
       });
-    });
+    }
 
-    // Añadir tipo de sensor
-    $('#formTipo').on('submit', function(e){
-      e.preventDefault();
-      const nuevoTipo = $('#nuevoTipo').val();
-      fetch("/tipos_sensores", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({nombre: nuevoTipo})
-      }).then(()=> {
-        $('#nuevoTipo').val("");
-        cargarTipos();
-      });
-    });
-
-    // Eliminar tipo
-    $('#tablaTipos').on('click','.btnEliminarTipo', function(){
-      const id = $(this).data('id');
-      if(confirm("¿Eliminar este tipo de sensor?")){
-        fetch(`/tipos_sensores/${id}`, {method:"DELETE"}).then(()=> cargarTipos());
-      }
-    });
-
-    // Eliminar sensor
-    $('#tablaSensores').on('click','.btnEliminar', function(){
-      const id = $(this).data('id');
-      if(confirm("¿Eliminar este sensor?")){
-        fetch(`/sensores/${id}`, {method:"DELETE"}).then(()=> cargarSensores());
-      }
-    });
-
-    // Editar sensor (solo ubicación por ahora)
-    $('#tablaSensores').on('click','.btnEditar', function(){
-      const id = $(this).data('id');
-      const nuevaUbicacion = prompt("Introduce nueva ubicación:");
-      if(nuevaUbicacion){
-        fetch(`/sensores/${id}`, {
-          method:"PUT",
-          headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ubicacion: nuevaUbicacion})
-        }).then(()=> cargarSensores());
-      }
-    });
-
-    // Mostrar gráfico por cada sensor
-    $('#tablaSensores').on('click','.btnGrafico', function(){
+    // Eventos para botones
+    $('#tablaSensores').on('click', '.btnGrafico', function(){
       const id = $(this).data('id');
       fetch(`/sensores/${id}/historial`)
         .then(res => res.json())
-        .then(data => {
-          const ctx = document.getElementById('graficoSensor').getContext('2d');
-          if (grafico) { grafico.destroy(); } // destruir gráfico previo
-          grafico = new Chart(ctx, {
+        .then(historial => {
+          if (grafico) grafico.destroy();
+          grafico = new Chart(document.getElementById('graficoSensor'), {
             type: 'line',
             data: {
-              labels: data.map(d => d.fecha + " " + d.hora),
+              labels: historial.map(h => h.fecha + " " + h.hora),
               datasets: [{
-                label: 'Valores del Sensor ' + id,
-                data: data.map(d => d.valor),
-                borderColor: 'rgba(0,64,128,0.85)',
+                label: 'Valor',
+                data: historial.map(h => h.valor),
+                borderColor: 'rgba(75,192,192,0.8)',
                 fill: false
               }]
             }
           });
-          const modal = new bootstrap.Modal(document.getElementById('modalGrafico'));
-          modal.show();
+          $('#modalGrafico').modal('show');
         });
     });
+
+    // Inicializar carga
+    cargarSensores();
+    // Auto-refresh cada 10 segundos para mantener historial
+    setInterval(cargarSensores, 10000);
   });
 </script>
 </body>
