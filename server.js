@@ -73,11 +73,48 @@ app.post('/login', async (req, res) => {
       duracion_segundos: 0
     });
 
-    res.json({ mensaje: "Login correcto", usuario });
+    // 👇 Aquí devolvemos también el rol para que el frontend lo guarde en sessionStorage
+    res.json({ 
+      mensaje: "Login correcto", 
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        nombre: usuario.nombre,
+        correo: usuario.correo,
+        rol: usuario.rol // 👈 importante para control de acceso
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ---------------- Middleware de Roles ----------------
+function verificarRol(rolesPermitidos) {
+  return (req, res, next) => {
+    // 👇 El rol lo recibimos desde headers o token
+    const rol = req.headers["rol"]; 
+    if (!rol || !rolesPermitidos.includes(rol)) {
+      return res.status(403).json({ error: "Acceso denegado" });
+    }
+    // Guardamos el rol en req.usuario para usarlo en la ruta
+    req.usuario = { rol };
+    next();
+  };
+}
+
+// ---------------- Ejemplo de uso en rutas ----------------
+// Solo admin puede modificar configuración
+app.put("/configuracion", verificarRol(["admin"]), async (req, res) => {
+  // Aquí iría la lógica para actualizar configuración
+  res.json({ mensaje: "Configuración actualizada correctamente" });
+});
+
+// Admin y profesor pueden acceder a videoclases
+app.get("/videoclases", verificarRol(["admin", "profesor"]), async (req, res) => {
+  // Aquí iría la lógica para listar videoclases
+  res.json({ mensaje: "Listado de videoclases" });
+});
+
 
 // ---------------- USUARIOS CRUD ----------------
 app.get('/usuarios', async (req, res) => {
