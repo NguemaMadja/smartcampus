@@ -11,10 +11,8 @@
     footer { margin-top: auto; }
     .modal-header { background-color: rgba(0, 64, 128, 0.85); color: white; }
     .btn-rounded { border-radius: 20px; }
-    #graficoSensor, #graficoGlobal { height: 400px; }
+    #graficoSensor { height: 400px; }
     .card-header { background-color: rgba(0, 64, 128, 0.85); color: white; }
-    .alert-critical { background-color: rgba(255, 99, 132, 0.2); }
-    .alert-warning { background-color: rgba(255, 206, 86, 0.2); }
   </style>
 </head>
 <body>
@@ -48,20 +46,6 @@
     <a href="estadisticas.html" class="btn btn-primary btn-rounded">Ir al Módulo Estadísticas ➡️</a>
   </div>
   <h2>Datos de Sensores</h2>
-
-  <!-- Resumen ejecutivo -->
-  <div id="resumenEjecutivo" class="alert alert-info mb-4">
-    <strong>Sensores activos:</strong> <span id="totalSensores">0</span> |
-    <strong>Alertas críticas:</strong> <span id="alertasCriticas">0</span> |
-    <strong>Última actualización:</strong> <span id="ultimaActualizacion">-</span>
-  </div>
-
-  <!-- Panel de riesgos -->
-  <div id="panelRiesgos" class="alert alert-danger mb-4" style="display:none;">
-    <h5>Sensores en estado crítico:</h5>
-    <ul id="listaRiesgos"></ul>
-  </div>
-
   <div class="mb-3">
     <button class="btn btn-success btn-rounded" data-bs-toggle="modal" data-bs-target="#modalAgregar">➕ Registrar Sensor</button>
     <button class="btn btn-info btn-rounded" data-bs-toggle="modal" data-bs-target="#modalTipos">⚙️ Gestionar Tipos de Sensores</button>
@@ -88,7 +72,7 @@
   </table>
 </div>
 
-<!-- Modales -->
+<!-- Modal Registrar Sensor -->
 <div class="modal fade" id="modalAgregar" tabindex="-1">
   <div class="modal-dialog"><div class="modal-content">
     <div class="modal-header"><h5 class="modal-title">Registrar Sensor</h5></div>
@@ -103,6 +87,7 @@
   </div></div>
 </div>
 
+<!-- Modal Tipos de Sensores -->
 <div class="modal fade" id="modalTipos" tabindex="-1">
   <div class="modal-dialog modal-lg"><div class="modal-content">
     <div class="modal-header"><h5 class="modal-title">Gestionar Tipos de Sensores</h5></div>
@@ -119,19 +104,12 @@
   </div></div>
 </div>
 
+<!-- Modal Gráfico -->
 <div class="modal fade" id="modalGrafico" tabindex="-1">
   <div class="modal-dialog modal-lg"><div class="modal-content">
     <div class="modal-header"><h5 class="modal-title">Gráfico del Sensor</h5></div>
     <div class="modal-body"><canvas id="graficoSensor"></canvas></div>
   </div></div>
-</div>
-
-<!-- Gráfico global comparativo -->
-<div class="container mt-4">
-  <div class="card">
-    <div class="card-header">Comparativo Global de Sensores</div>
-    <div class="card-body"><canvas id="graficoGlobal"></canvas></div>
-  </div>
 </div>
 
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
@@ -149,37 +127,17 @@
   $(document).ready(function() {
     const tablaSensores = $('#tablaSensores').DataTable({
       dom: 'Bfrtip',
-      buttons: [
-        'copy', 'csv', 'excel', 'pdf',
-        {
-          extend: 'print',
-          text: 'Imprimir con interpretación',
-          action: function (e, dt, node, config) {
-            const win = window.open('', '', 'height=800,width=1200');
-            win.document.write('<html><head><title>Reporte de Sensores</title></head><body>');
-            win.document.write('<h2>Resumen Ejecutivo</h2>');
-            win.document.write($('#resumenEjecutivo')[0].outerHTML);
-            win.document.write('<h2>Panel de Riesgos</h2>');
-            win.document.write($('#panelRiesgos')[0].outerHTML);
-            win.document.write('<h2>Tabla de Sensores</h2>');
-            win.document.write($('#tablaSensores').clone()[0].outerHTML);
-            win.document.write('</body></html>');
-            win.document.close();
-            win.print();
-          }
-        }
-      ]
+      buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
     });
     const tablaTipos = $('#tablaTipos').DataTable();
     let grafico;
-    let graficoGlobal;
 
-    // Función para cargar sensores
+    // Función para cargar sensores (actualiza filas existentes)
     function cargarSensores(){
       fetch("/sensores")
         .then(res => res.json())
         .then(data => {
-          // Añadir nuevas filas sin limpiar la tabla (mantener historial)
+          tablaSensores.clear();
           data.forEach(s => {
             tablaSensores.row.add([
               s.id_sensor,
@@ -192,52 +150,23 @@
               `<button class="btn btn-primary btn-sm btnGrafico" data-id="${s.id_sensor}">📊</button>
                <button class="btn btn-warning btn-sm btnEditar" data-id="${s.id_sensor}">✏️</button>
                <button class="btn btn-danger btn-sm btnEliminar" data-id="${s.id_sensor}">🗑️</button>`
-            ]).draw(false);
+            ]);
           });
+          tablaSensores.draw();
 
           // Actualizar tarjetas explicativas
           actualizarTarjetas(data);
-
-          // Actualizar resumen ejecutivo
-          $('#totalSensores').text(data.length);
-          $('#ultimaActualizacion').text(new Date().toLocaleString());
-
-          // Panel de riesgos
-          const riesgos = data.filter(s => esCritico(s));
-          if (riesgos.length > 0) {
-            $('#panelRiesgos').show();
-            $('#alertasCriticas').text(riesgos.length);
-            $('#listaRiesgos').empty();
-            riesgos.forEach(r => {
-              $('#listaRiesgos').append(`<li>${r.tipo} en Aula ${r.aula} (Valor: ${r.valor})</li>`);
-            });
-          } else {
-            $('#panelRiesgos').hide();
-            $('#alertasCriticas').text(0);
-          }
-
-          // Gráfico global comparativo
-          actualizarGraficoGlobal(data);
         })
         .catch(err => console.error("Error cargando sensores:", err));
-    }
-
-    // Función para determinar si un sensor está en estado crítico
-    function esCritico(sensor){
-      if(sensor.tipo.toLowerCase().includes("temperatura") && sensor.valor > 30) return true;
-      if(sensor.tipo.toLowerCase().includes("pir") && sensor.valor === "Movimiento") return true;
-      if(sensor.tipo.toLowerCase().includes("humedad") && sensor.valor > 80) return true;
-      return false;
     }
 
     // Función para actualizar tarjetas explicativas
     function actualizarTarjetas(data){
       $('#tarjetasSensores').empty();
       data.forEach(s => {
-        const estado = esCritico(s) ? 'alert-critical' : '';
         const tarjeta = `
           <div class="col-md-3 mb-3">
-            <div class="card text-center ${estado}">
+            <div class="card text-center">
               <div class="card-header">${s.tipo} (ID ${s.id_sensor})</div>
               <div class="card-body">
                 <h5>${s.valor || "-"}</h5>
@@ -249,28 +178,6 @@
             </div>
           </div>`;
         $('#tarjetasSensores').append(tarjeta);
-      });
-    }
-
-    // Función para actualizar gráfico global comparativo
-    function actualizarGraficoGlobal(data){
-      if (graficoGlobal) graficoGlobal.destroy();
-      const tipos = [...new Set(data.map(d => d.tipo))];
-      const colores = ['rgba(75,192,192,0.8)','rgba(255,99,132,0.8)','rgba(54,162,235,0.8)','rgba(255,206,86,0.8)','rgba(153,102,255,0.8)'];
-      const datasets = tipos.map((tipo, i) => {
-        return {
-          label: tipo,
-          data: data.filter(d => d.tipo === tipo).map(d => d.valor),
-          borderColor: colores[i % colores.length],
-          fill: false
-        };
-      });
-      graficoGlobal = new Chart(document.getElementById('graficoGlobal'), {
-        type: 'line',
-        data: {
-          labels: data.map(d => d.fecha + " " + d.hora),
-          datasets: datasets
-        }
       });
     }
 
@@ -299,8 +206,38 @@
 
     // Inicializar carga
     cargarSensores();
-    // Auto-refresh cada 10 segundos para mantener historial
-    setInterval(cargarSensores, 10000);
+    // Auto-refresh cada 20 segundos
+    setInterval(cargarSensores, 20000);
+
+    // Manejo de formulario Registrar Sensor
+    $('#formAgregar').on('submit', function(e){
+      e.preventDefault();
+      const tipo = $('#tipo').val();
+      const aula = $('#aula').val();
+      const ubicacion = $('#ubicacion').val();
+      fetch("/sensores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipo, aula, ubicacion })
+      }).then(() => {
+        $('#modalAgregar').modal('hide');
+        cargarSensores();
+      });
+    });
+
+    // Manejo de formulario Tipos de Sensor
+    $('#formTipo').on('submit', function(e){
+      e.preventDefault();
+      const nuevoTipo = $('#nuevoTipo').val();
+      fetch("/tipos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: nuevoTipo })
+      }).then(() => {
+        $('#modalTipos').modal('hide');
+        // recargar tipos
+      });
+    });
   });
 </script>
 </body>
