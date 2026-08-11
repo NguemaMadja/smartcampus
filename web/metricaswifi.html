@@ -91,6 +91,9 @@
         </thead>
         <tbody></tbody>
       </table>
+      <div id="mensajeVacio" class="text-center mt-3 text-muted" style="display:none;">
+        No hay métricas en el rango seleccionado.
+      </div>
     </div>
   </div>
 
@@ -137,6 +140,15 @@
       fetch("/metricaswifi?" + new URLSearchParams(filtros))
         .then(res => res.json())
         .then(data => {
+          console.log("Datos recibidos:", data);
+
+          // Mostrar mensaje si no hay datos
+          if (data.length === 0) {
+            $('#mensajeVacio').show();
+          } else {
+            $('#mensajeVacio').hide();
+          }
+
           // Tabla
           tablaWifi.clear();
           data.forEach(m => {
@@ -155,7 +167,7 @@
               m.jitter,
               m.perdida_paquetes,
               m.nivel_senal,
-              m.fecha
+              new Date(m.fecha).toLocaleString()
             ]).node().className = rowClass;
           });
           tablaWifi.draw();
@@ -165,7 +177,7 @@
           graficoLatencia = new Chart(document.getElementById('graficoLatencia'), {
             type: 'line',
             data: {
-              labels: data.map(d => d.fecha),
+              labels: data.map(d => new Date(d.fecha).toLocaleString()),
               datasets: [
                 { label: 'Latencia (ms)', data: data.map(d => d.latencia), borderColor: 'rgba(255,99,132,0.8)', fill: false },
                 { label: 'Jitter (ms)', data: data.map(d => d.jitter), borderColor: 'rgba(54,162,235,0.8)', fill: false }
@@ -178,7 +190,7 @@
           graficoVelocidad = new Chart(document.getElementById('graficoVelocidad'), {
             type: 'line',
             data: {
-              labels: data.map(d => d.fecha),
+              labels: data.map(d => new Date(d.fecha).toLocaleString()),
               datasets: [
                 { label: 'Velocidad (Mbps)', data: data.map(d => d.ancho_banda), borderColor: 'rgba(75,192,192,0.8)', fill: false },
                 { label: 'Nivel Señal (dBm)', data: data.map(d => d.nivel_senal), borderColor: 'rgba(153,102,255,0.8)', fill: false }
