@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Panel Profesor - SmartCampusGuide</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <style>
     body {
       background-color: #f5f5f5;
@@ -18,6 +19,9 @@
       padding: 15px;
       font-size: 1.5rem;
       font-weight: bold;
+    }
+    header button {
+      float: right;
     }
     .card {
       margin-top: 20px;
@@ -43,115 +47,144 @@
   <!-- Cabecera -->
   <header>
     Panel del Profesor - SmartCampusGuide
+    <button class="btn btn-danger ms-3" onclick="cerrarSesion()">
+      <i class="bi bi-box-arrow-right me-1"></i> Cerrar Sesión
+    </button>
   </header>
-
   <div class="container">
-    <!-- Asignaturas -->
+    <!-- Videoclases -->
     <div class="card">
-      <div class="card-header">Asignaturas</div>
+      <div class="card-header">Video Clases</div>
       <div class="card-body">
-        <button class="btn btn-primary" onclick="cargarAsignaturas()">Ver asignaturas</button>
-        <ul id="listaAsignaturas" class="mt-3"></ul>
+        <button class="btn btn-primary" onclick="cargarVideoclases()">Ver videoclases</button>
+        <ul id="listaVideoclases" class="mt-3"></ul>
       </div>
     </div>
 
-    <!-- Asistencia -->
+    <!-- Sensores -->
     <div class="card">
-      <div class="card-header">Asistencia</div>
+      <div class="card-header">Sensores</div>
       <div class="card-body">
-        <button class="btn btn-success" onclick="cargarAsistencia()">Ver asistencia</button>
-        <ul id="listaAsistencia" class="mt-3"></ul>
+        <button class="btn btn-success" onclick="cargarSensores()">Ver resultados</button>
+        <ul id="listaSensores" class="mt-3"></ul>
       </div>
     </div>
 
-    <!-- Materiales -->
+    <!-- Métricas WiFi -->
     <div class="card">
-      <div class="card-header">Materiales</div>
+      <div class="card-header">Métricas WiFi</div>
       <div class="card-body">
-        <button class="btn btn-info" onclick="cargarMateriales()">Ver materiales</button>
-        <ul id="listaMateriales" class="mt-3"></ul>
+        <button class="btn btn-info" onclick="cargarMetricas()">Ver métricas</button>
+        <ul id="listaMetricas" class="mt-3"></ul>
       </div>
     </div>
 
-    <!-- Estudiantes -->
+    <!-- Radio UNGE -->
     <div class="card">
-      <div class="card-header">Estudiantes</div>
+      <div class="card-header">Radio UNGE</div>
       <div class="card-body">
-        <button class="btn btn-warning" onclick="cargarEstudiantes()">Ver estudiantes</button>
-        <ul id="listaEstudiantes" class="mt-3"></ul>
+        <button class="btn btn-warning" onclick="cargarRadio()">Sintonizar programas</button>
+        <ul id="listaRadio" class="mt-3"></ul>
+      </div>
+    </div>
+
+    <!-- Transporte Escolar -->
+    <div class="card">
+      <div class="card-header">Transporte Escolar</div>
+      <div class="card-body">
+        <button class="btn btn-secondary" onclick="cargarTransporte()">Ver rutas y buses</button>
+        <ul id="listaTransporte" class="mt-3"></ul>
+      </div>
+    </div>
+
+    <!-- Mapa -->
+    <div class="card">
+      <div class="card-header">Mapa del Campus</div>
+      <div class="card-body">
+        <button class="btn btn-dark" onclick="cargarMapa()">Abrir mapa</button>
+        <div id="mapaContainer" class="mt-3"></div>
       </div>
     </div>
   </div>
 
   <!-- Pie de página -->
   <footer>
-    TODOS LOS DERECHOS RESERVADOS -UNGE- @ IoT A NUESTRO ALCANCE - 2026
+    TODOS LOS DERECHOS RESERVADOS - UNGE © IoT A NUESTRO ALCANCE - 2026
   </footer>
-
   <!-- Scripts -->
   <script>
-    async function cargarAsignaturas() {
-      try {
-        const res = await fetch("/asignaturas");
-        const data = await res.json();
-        const lista = document.getElementById("listaAsignaturas");
-        lista.innerHTML = "";
-        data.forEach(a => {
-          const li = document.createElement("li");
-          li.textContent = `${a.id_asignatura} - ${a.nombre} (${a.carrera})`;
-          lista.appendChild(li);
-        });
-      } catch {
-        alert("Error al cargar asignaturas");
+    function cerrarSesion() {
+      if (confirm("¿Estás seguro de que deseas cerrar sesión?")) {
+        sessionStorage.clear();
+        window.location.href = "index.html";
       }
     }
 
-    async function cargarAsistencia() {
-      try {
-        const res = await fetch("/asistencia");
-        const data = await res.json();
-        const lista = document.getElementById("listaAsistencia");
-        lista.innerHTML = "";
-        data.forEach(as => {
-          const li = document.createElement("li");
-          li.textContent = `Clase ${as.id_clase} - Estudiante ${as.id_estudiante} (${as.estado})`;
-          lista.appendChild(li);
-        });
-      } catch {
-        alert("Error al cargar asistencia");
-      }
+    async function cargarVideoclases() {
+      const res = await fetch("/videoclases");
+      const data = await res.json();
+      const lista = document.getElementById("listaVideoclases");
+      lista.innerHTML = "";
+      data.forEach(v => {
+        const li = document.createElement("li");
+        li.textContent = `${v.titulo} - ${v.profesor}`;
+        lista.appendChild(li);
+      });
     }
 
-    async function cargarMateriales() {
-      try {
-        const res = await fetch("/materiales");
-        const data = await res.json();
-        const lista = document.getElementById("listaMateriales");
-        lista.innerHTML = "";
-        data.forEach(m => {
-          const li = document.createElement("li");
-          li.textContent = `${m.id_material} - ${m.nombre} (${m.tipo})`;
-          lista.appendChild(li);
-        });
-      } catch {
-        alert("Error al cargar materiales");
-      }
+    async function cargarSensores() {
+      const res = await fetch("/sensores");
+      const data = await res.json();
+      const lista = document.getElementById("listaSensores");
+      lista.innerHTML = "";
+      data.forEach(s => {
+        const li = document.createElement("li");
+        li.textContent = `${s.tipo}: ${s.valor} (${s.unidad})`;
+        lista.appendChild(li);
+      });
     }
 
-    async function cargarEstudiantes() {
-      try {
-        const res = await fetch("/estudiantes");
-        const data = await res.json();
-        const lista = document.getElementById("listaEstudiantes");
-        lista.innerHTML = "";
-        data.forEach(e => {
-          const li = document.createElement("li");
-          li.textContent = `${e.id_estudiante} - ${e.nombre} (${e.carrera})`;
-          lista.appendChild(li);
-        });
-      } catch {
-        alert("Error al cargar estudiantes");
-      }
+    async function cargarMetricas() {
+      const res = await fetch("/metricaswifi");
+      const data = await res.json();
+      const lista = document.getElementById("listaMetricas");
+      lista.innerHTML = "";
+      data.forEach(m => {
+        const li = document.createElement("li");
+        li.textContent = `${m.ssid} - ${m.intensidad} dBm`;
+        lista.appendChild(li);
+      });
+    }
+
+    async function cargarRadio() {
+      const res = await fetch("/radiounge");
+      const data = await res.json();
+      const lista = document.getElementById("listaRadio");
+      lista.innerHTML = "";
+      data.forEach(r => {
+        const li = document.createElement("li");
+        li.textContent = `${r.programa} - ${r.hora}`;
+        lista.appendChild(li);
+      });
+    }
+
+    async function cargarTransporte() {
+      const res = await fetch("/transporteescolar");
+      const data = await res.json();
+      const lista = document.getElementById("listaTransporte");
+      lista.innerHTML = "";
+      data.forEach(t => {
+        const li = document.createElement("li");
+        li.textContent = `Bus ${t.bus} - Ruta ${t.ruta} - Posición ${t.posicion}`;
+        lista.appendChild(li);
+      });
+    }
+
+    async function cargarMapa() {
+      const res = await fetch("/mapa");
+      const data = await res.json();
+      const cont = document.getElementById("mapaContainer");
+      cont.innerHTML = `<p>Mapa cargado con ${data.lugares.length} lugares disponibles.</p>`;
     }
   </script>
 
