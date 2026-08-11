@@ -11,7 +11,7 @@
     footer { margin-top: auto; }
     .modal-header { background-color: rgba(0, 64, 128, 0.85); color: white; }
     .btn-rounded { border-radius: 20px; }
-    #graficoSensor { height: 400px; }
+    #graficoSensor, #graficoGlobal { height: 400px; }
     .card-header { background-color: rgba(0, 64, 128, 0.85); color: white; }
     .alert-critical { background-color: rgba(255, 99, 132, 0.2); }
     .alert-warning { background-color: rgba(255, 206, 86, 0.2); }
@@ -88,7 +88,7 @@
   </table>
 </div>
 
-<!-- Modales (Registrar, Tipos, Gráfico) -->
+<!-- Modales -->
 <div class="modal fade" id="modalAgregar" tabindex="-1">
   <div class="modal-dialog"><div class="modal-content">
     <div class="modal-header"><h5 class="modal-title">Registrar Sensor</h5></div>
@@ -124,6 +124,14 @@
     <div class="modal-header"><h5 class="modal-title">Gráfico del Sensor</h5></div>
     <div class="modal-body"><canvas id="graficoSensor"></canvas></div>
   </div></div>
+</div>
+
+<!-- Gráfico global comparativo -->
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-header">Comparativo Global de Sensores</div>
+    <div class="card-body"><canvas id="graficoGlobal"></canvas></div>
+  </div>
 </div>
 
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
@@ -164,6 +172,7 @@
     });
     const tablaTipos = $('#tablaTipos').DataTable();
     let grafico;
+    let graficoGlobal;
 
     // Función para cargar sensores
     function cargarSensores(){
@@ -206,6 +215,9 @@
             $('#panelRiesgos').hide();
             $('#alertasCriticas').text(0);
           }
+
+          // Gráfico global comparativo
+          actualizarGraficoGlobal(data);
         })
         .catch(err => console.error("Error cargando sensores:", err));
     }
@@ -237,6 +249,28 @@
             </div>
           </div>`;
         $('#tarjetasSensores').append(tarjeta);
+      });
+    }
+
+    // Función para actualizar gráfico global comparativo
+    function actualizarGraficoGlobal(data){
+      if (graficoGlobal) graficoGlobal.destroy();
+      const tipos = [...new Set(data.map(d => d.tipo))];
+      const colores = ['rgba(75,192,192,0.8)','rgba(255,99,132,0.8)','rgba(54,162,235,0.8)','rgba(255,206,86,0.8)','rgba(153,102,255,0.8)'];
+      const datasets = tipos.map((tipo, i) => {
+        return {
+          label: tipo,
+          data: data.filter(d => d.tipo === tipo).map(d => d.valor),
+          borderColor: colores[i % colores.length],
+          fill: false
+        };
+      });
+      graficoGlobal = new Chart(document.getElementById('graficoGlobal'), {
+        type: 'line',
+        data: {
+          labels: data.map(d => d.fecha + " " + d.hora),
+          datasets: datasets
+        }
       });
     }
 
