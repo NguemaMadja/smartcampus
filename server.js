@@ -1966,6 +1966,7 @@ app.get('/metricaswifi', async (req, res) => {
     query += ` ORDER BY fecha ASC`;
 
     const result = await pool.query(query, params);
+    console.log("Resultados métricas WiFi:", result.rows); // depuración
     res.json(result.rows);
   } catch (err) {
     console.error("Error en GET /metricaswifi:", err);
@@ -1973,14 +1974,14 @@ app.get('/metricaswifi', async (req, res) => {
   }
 });
 
-// Insertar métricas WiFi (para ESP32)
+// Insertar métricas WiFi (para ESP32 o pruebas)
 app.post('/metricaswifi', async (req, res) => {
   try {
     const { id_aula, usuarios_conectados, ancho_banda, latencia, jitter, perdida_paquetes, nivel_senal } = req.body;
 
     const query = `
       INSERT INTO metricaswifi (id_aula, usuarios_conectados, ancho_banda, latencia, jitter, perdida_paquetes, nivel_senal, fecha)
-      VALUES ($1,$2,$3,$4,$5,$6,$7, CURRENT_DATE)
+      VALUES ($1,$2,$3,$4,$5,$6,$7, CURRENT_TIMESTAMP)
       RETURNING *;
     `;
 
