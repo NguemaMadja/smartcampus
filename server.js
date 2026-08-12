@@ -61,7 +61,7 @@ app.post('/login', async (req, res) => {
     const valido = bcrypt.compareSync(password, usuario.password_hash);
     if (!valido) return res.status(401).json({ error: "Contraseña incorrecta" });
 
-    // 👇 Registrar acción en actividad y huella
+    // Registrar acción en actividad y huella
     await registrarAccion({
       id_usuario: usuario.id_usuario,
       accion: 'LOGIN',
@@ -73,14 +73,14 @@ app.post('/login', async (req, res) => {
       duracion_segundos: 0
     });
 
-    // 👇 Aquí devolvemos también el rol para que el frontend lo guarde en sessionStorage
+    // Antes devolvías solo los datos básicos del usuario
     res.json({ 
       mensaje: "Login correcto", 
       usuario: {
         id_usuario: usuario.id_usuario,
         nombre: usuario.nombre,
-        correo: usuario.correo,
-        rol: usuario.rol // 👈 importante para control de acceso
+        correo: usuario.correo
+        // 👈 sin rol ni headers especiales
       }
     });
   } catch (err) {
@@ -88,90 +88,57 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// ---------------- Middleware de Roles ----------------
-function verificarRol(rolesPermitidos) {
-  return (req, res, next) => {
-    const rol = req.headers["rol"]; 
-    if (!rol || !rolesPermitidos.includes(rol)) {
-      return res.status(403).json({ error: "Acceso denegado" });
-    }
-    req.usuario = { rol };
-    next();
-  };
-}
-
 // === Videoclases ===
-// Profesor: puede ver, crear y modificar, pero no eliminar
-app.get("/videoclases", verificarRol(["admin","profesor"]), async (req, res) => {
+app.get("/videoclases", async (req, res) => {
   const result = await pool.query("SELECT id, titulo, profesor FROM videoclases");
   res.json(result.rows);
 });
 
-app.post("/videoclases", verificarRol(["admin","profesor"]), async (req, res) => {
+app.post("/videoclases", async (req, res) => {
   const { titulo, profesor } = req.body;
   await pool.query("INSERT INTO videoclases (titulo, profesor) VALUES ($1, $2)", [titulo, profesor]);
   res.json({ mensaje: "Videoclase creada" });
 });
 
-app.put("/videoclases/:id", verificarRol(["admin","profesor"]), async (req, res) => {
+app.put("/videoclases/:id", async (req, res) => {
   const { id } = req.params;
   const { titulo, profesor } = req.body;
   await pool.query("UPDATE videoclases SET titulo=$1, profesor=$2 WHERE id=$3", [titulo, profesor, id]);
   res.json({ mensaje: "Videoclase modificada" });
 });
 
-app.delete("/videoclases/:id", verificarRol(["admin"]), async (req, res) => {
+app.delete("/videoclases/:id", async (req, res) => {
   const { id } = req.params;
   await pool.query("DELETE FROM videoclases WHERE id=$1", [id]);
   res.json({ mensaje: "Videoclase eliminada" });
 });
 
 // === Sensores ===
-app.get("/sensores", verificarRol(["admin","profesor"]), async (req, res) => {
-  if (req.usuario.rol === "profesor") {
-    const result = await pool.query("SELECT tipo, valor, unidad FROM sensores");
-    res.json(result.rows);
-  } else {
-    const result = await pool.query("SELECT * FROM sensores");
-    res.json(result.rows);
-  }
+app.get("/sensores", async (req, res) => {
+  const result = await pool.query("SELECT * FROM sensores");
+  res.json(result.rows);
 });
 
 // === Métricas WiFi ===
-app.get("/metricaswifi", verificarRol(["admin","profesor"]), async (req, res) => {
-  if (req.usuario.rol === "profesor") {
-    const result = await pool.query("SELECT ssid, intensidad FROM metricaswifi");
-    res.json(result.rows);
-  } else {
-    const result = await pool.query("SELECT * FROM metricaswifi");
-    res.json(result.rows);
-  }
+app.get("/metricaswifi", async (req, res) => {
+  const result = await pool.query("SELECT * FROM metricaswifi");
+  res.json(result.rows);
 });
 
 // === Radio UNGE ===
-app.get("/radiounge", verificarRol(["admin","profesor"]), async (req, res) => {
-  if (req.usuario.rol === "profesor") {
-    const result = await pool.query("SELECT programa, hora, oyentes FROM radio_programas");
-    res.json(result.rows);
-  } else {
-    const result = await pool.query("SELECT * FROM radio_programas");
-    res.json(result.rows);
-  }
+app.get("/radiounge", async (req, res) => {
+  const result = await pool.query("SELECT * FROM radio_programas");
+  res.json(result.rows);
 });
 
 // === Transporte Escolar ===
-app.get("/transporteescolar", verificarRol(["admin","profesor"]), async (req, res) => {
-  if (req.usuario.rol === "profesor") {
-    const result = await pool.query("SELECT bus, ruta, parada, posicion FROM transporte");
-    res.json(result.rows);
-  } else {
-    const result = await pool.query("SELECT * FROM transporte");
-    res.json(result.rows);
-  }
+app.get("/transporteescolar", async (req, res) => {
+  const result = await pool.query("SELECT * FROM transporte");
+  res.json(result.rows);
 });
 
 // === Mapa ===
-app.get("/mapa", verificarRol(["admin","profesor"]), async (req, res) => {
+app.get("/mapa", async (req, res) => {
   const result = await pool.query("SELECT nombre, coordenadas FROM lugares");
   res.json(result.rows);
 });
