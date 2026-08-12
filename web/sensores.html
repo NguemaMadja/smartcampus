@@ -121,9 +121,12 @@
 
 <script>
   $(document).ready(function() {
-    // Inicializar DataTable con mapeo de columnas
+    // Inicializar DataTable con mapeo de columnas y dataSrc
     const tablaSensores = $('#tablaSensores').DataTable({
-      ajax: '/sensores',
+      ajax: {
+        url: '/sensores',
+        dataSrc: ""   // 👈 importante: tu backend devuelve un array plano
+      },
       columns: [
         { data: 'id_sensor', title: 'ID Sensor' },
         { data: 'tipo', title: 'Tipo' },
