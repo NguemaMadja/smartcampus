@@ -1596,8 +1596,6 @@ app.delete('/sensores/:id', async (req, res) => {
   }
 });
 
-
-
 // ---------------- LECTURAS DE SENSORES ----------------
 app.post('/sensores/data', async (req, res) => {
   try {
@@ -1656,6 +1654,7 @@ app.get('/sensores/:id/historial', async (req, res) => {
     res.status(500).json({ error: "Error al obtener historial del sensor" });
   }
 });
+
 
 // ---------------- QR Y ASISTENCIA ----------------
 
