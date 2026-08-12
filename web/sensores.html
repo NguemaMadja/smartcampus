@@ -108,7 +108,6 @@
     <div class="modal-body"><canvas id="graficoSensor"></canvas></div>
   </div></div>
 </div>
-
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS -UNGE- @ IoT A NUESTRO ALCANCE - 2026
 </footer>
@@ -122,38 +121,29 @@
 
 <script>
   $(document).ready(function() {
+    // Inicializar DataTable con mapeo de columnas
     const tablaSensores = $('#tablaSensores').DataTable({
+      ajax: '/sensores',
+      columns: [
+        { data: 'id_sensor', title: 'ID Sensor' },
+        { data: 'tipo', title: 'Tipo' },
+        { data: 'aula', title: 'Aula' },
+        { data: 'ubicacion', title: 'Ubicación' },
+        { data: 'valor', title: 'Valor', defaultContent: '-' },
+        { data: 'fecha', title: 'Fecha', defaultContent: '-' },
+        { data: 'hora', title: 'Hora', defaultContent: '-' },
+        { data: null, title: 'Acciones', render: (data, type, row) => `
+          <button class="btn btn-primary btn-sm btnGrafico" data-id="${row.id_sensor}">📊</button>
+          <button class="btn btn-warning btn-sm btnEditar" data-id="${row.id_sensor}">✏️</button>
+          <button class="btn btn-danger btn-sm btnEliminar" data-id="${row.id_sensor}">🗑️</button>
+        `}
+      ],
       dom: 'Bfrtip',
       buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
     });
+
     const tablaTipos = $('#tablaTipos').DataTable();
     let grafico;
-
-    // Cargar sensores
-    function cargarSensores(){
-      fetch("/sensores")
-        .then(res => res.json())
-        .then(data => {
-          tablaSensores.clear();
-          data.forEach(s => {
-            tablaSensores.row.add([
-              s.id_sensor,
-              s.tipo,
-              s.aula,
-              s.ubicacion,
-              s.valor || "-",
-              s.fecha || "-",
-              s.hora || "-",
-              `<button class="btn btn-primary btn-sm btnGrafico" data-id="${s.id_sensor}">📊</button>
-               <button class="btn btn-warning btn-sm btnEditar" data-id="${s.id_sensor}">✏️</button>
-               <button class="btn btn-danger btn-sm btnEliminar" data-id="${s.id_sensor}">🗑️</button>`
-            ]);
-          });
-          tablaSensores.draw();
-          actualizarTarjetas(data);
-        })
-        .catch(err => console.error("Error cargando sensores:", err));
-    }
 
     // Actualizar tarjetas
     function actualizarTarjetas(data){
@@ -175,6 +165,14 @@
         $('#tarjetasSensores').append(tarjeta);
       });
     }
+
+    // Recargar tarjetas cada vez que DataTables obtenga datos
+    tablaSensores.on('xhr.dt', function(e, settings, json){
+      actualizarTarjetas(json);
+    });
+
+    // Refresco automático cada 20 segundos
+    setInterval(() => tablaSensores.ajax.reload(null, false), 20000);
 
     // Botón gráfico
     $('#tablaSensores').on('click', '.btnGrafico', function(){
@@ -199,16 +197,13 @@
         });
     });
 
-    // Inicializar carga
-    cargarSensores();
-    setInterval(cargarSensores, 20000);
-
     // Poblar selects de tipos y aulas
     function cargarTipos(){
       fetch("/tipos_sensores")
         .then(res => res.json())
         .then(data => {
           $('#tipo').empty();
+          tablaTipos.clear();
           data.forEach(t => {
             $('#tipo').append(`<option value="${t.id_tipo}">${t.nombre}</option>`);
             tablaTipos.row.add([t.id_tipo, t.nombre,
@@ -242,7 +237,7 @@
         body: JSON.stringify({ id_tipo, id_aula, ubicacion })
       }).then(() => {
         $('#modalAgregar').modal('hide');
-        cargarSensores();
+        tablaSensores.ajax.reload();
       });
     });
 
@@ -256,7 +251,6 @@
         body: JSON.stringify({ nombre })
       }).then(() => {
         $('#modalTipos').modal('hide');
-        tablaTipos.clear();
         cargarTipos();
       });
     });
@@ -265,17 +259,14 @@
     $('#tablaTipos').on('click', '.btnEliminarTipo', function(){
       const id = $(this).data('id');
       fetch(`/tipos_sensores/${id}`, { method: "DELETE" })
-        .then(() => {
-          tablaTipos.clear();
-          cargarTipos();
-        });
+        .then(() => cargarTipos());
     });
 
     // Eliminar sensor
     $('#tablaSensores').on('click', '.btnEliminar', function(){
       const id = $(this).data('id');
       fetch(`/sensores/${id}`, { method: "DELETE" })
-        .then(() => cargarSensores());
+        .then(() => tablaSensores.ajax.reload());
     });
   });
 </script>
