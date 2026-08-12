@@ -1501,6 +1501,13 @@ app.get('/sensores', async (req, res) => {
       ORDER BY s.id_sensor
     `);
 
+
+    // 👇 Aquí imprimes el primer registro en la consola del servidor
+    console.log(result.rows[0]);
+
+
+
+    
     await registrarAccion({
       id_usuario: null,
       accion: 'CONSULTAR',
