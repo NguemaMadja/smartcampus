@@ -1478,6 +1478,7 @@ app.delete('/aulas/:id', async (req, res) => {
   }
 });
 
+
 // ---------------- SENSORES CRUD ----------------
 app.get('/sensores', async (req, res) => {
   try {
@@ -1594,6 +1595,8 @@ app.delete('/sensores/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
 
 // ---------------- LECTURAS DE SENSORES ----------------
 app.post('/sensores/data', async (req, res) => {
