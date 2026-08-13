@@ -1517,13 +1517,14 @@ app.delete('/aulas/:id', async (req, res) => {
 });
 
 
+
 // ---------------- SENSORES CRUD ----------------
 app.get('/sensores', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT s.id_sensor,
              ts.nombre AS tipo,
-             a.codigo || ' - ' || a.nombre AS aula,   -- 👈 concatenamos código y nombre
+             a.codigo || ' - ' || a.nombre AS aula,
              s.ubicacion,
              l.valor, l.fecha, l.hora
       FROM sensores s
@@ -1538,28 +1539,27 @@ app.get('/sensores', async (req, res) => {
       ) l ON true
       ORDER BY s.id_sensor;
     `);
-
-    // 👇 Depuración: imprime el primer registro en la consola del servidor
-    console.log(result.rows[0]);
-
-    // 👇 Envía la respuesta al frontend
     res.json(result.rows);
-
-    // 👇 Registrar acción
-    await registrarAccion({
-      id_usuario: null,
-      accion: 'CONSULTAR',
-      modulo: 'Sensores',
-      detalle: 'Consulta de todos los sensores',
-      dispositivo: 'Web',
-      ip: req.ip,
-      resultado: 'OK',
-      duracion_segundos: 0
-    });
-
   } catch (err) {
     console.error(err);
     res.status(500).send('Error al obtener sensores');
+  }
+});
+
+// ✅ Nuevo endpoint: obtener un sensor individual
+app.get('/sensores/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `SELECT id_sensor, id_tipo, id_aula, ubicacion
+       FROM sensores
+       WHERE id_sensor = $1`,
+      [id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Sensor no encontrado' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -1570,18 +1570,6 @@ app.post('/sensores', async (req, res) => {
       'INSERT INTO sensores (id_aula, id_tipo, ubicacion) VALUES ($1, $2, $3) RETURNING *',
       [id_aula, id_tipo, ubicacion]
     );
-
-    await registrarAccion({
-      id_usuario: null,
-      accion: 'CREAR',
-      modulo: 'Sensores',
-      detalle: `Sensor creado en aula ${id_aula}`,
-      dispositivo: 'Web',
-      ip: req.ip,
-      resultado: 'OK',
-      duracion_segundos: 0
-    });
-
     res.json(result.rows[0]);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -1597,18 +1585,6 @@ app.put('/sensores/:id', async (req, res) => {
       [id_aula, id_tipo, ubicacion, id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Sensor no encontrado' });
-
-    await registrarAccion({
-      id_usuario: null,
-      accion: 'EDITAR',
-      modulo: 'Sensores',
-      detalle: `Sensor ${id} actualizado`,
-      dispositivo: 'Web',
-      ip: req.ip,
-      resultado: 'OK',
-      duracion_segundos: 0
-    });
-
     res.json(result.rows[0]);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -1623,18 +1599,6 @@ app.delete('/sensores/:id', async (req, res) => {
       [id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Sensor no encontrado' });
-
-    await registrarAccion({
-      id_usuario: null,
-      accion: 'ELIMINAR',
-      modulo: 'Sensores',
-      detalle: `Sensor ${id} eliminado`,
-      dispositivo: 'Web',
-      ip: req.ip,
-      resultado: 'OK',
-      duracion_segundos: 0
-    });
-
     res.json({ mensaje: 'Sensor eliminado correctamente' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1647,23 +1611,10 @@ app.post('/sensores/data', async (req, res) => {
     const { id_sensor, valor } = req.body;
     const fecha = new Date().toISOString().split("T")[0];
     const hora = new Date().toISOString().split("T")[1].split(".")[0];
-
     const result = await pool.query(
       'INSERT INTO lecturas (id_sensor, valor, fecha, hora) VALUES ($1, $2, $3, $4) RETURNING *',
       [id_sensor, valor, fecha, hora]
     );
-
-    await registrarAccion({
-      id_usuario: null,
-      accion: 'CREAR',
-      modulo: 'Sensores',
-      detalle: `Lectura registrada para sensor ${id_sensor}`,
-      dispositivo: 'Web',
-      ip: req.ip,
-      resultado: 'OK',
-      duracion_segundos: 0
-    });
-
     res.json({ mensaje: 'Lectura registrada', data: result.rows[0] });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -1681,24 +1632,14 @@ app.get('/sensores/:id/historial', async (req, res) => {
        ORDER BY fecha ASC, hora ASC`,
       [id]
     );
-
-    await registrarAccion({
-      id_usuario: null,
-      accion: 'CONSULTAR',
-      modulo: 'Sensores',
-      detalle: `Consulta historial del sensor ${id}`,
-      dispositivo: 'Web',
-      ip: req.ip,
-      resultado: 'OK',
-      duracion_segundos: 0
-    });
-
     res.json(result.rows);
   } catch (err) {
     console.error("Error obteniendo historial:", err);
     res.status(500).json({ error: "Error al obtener historial del sensor" });
   }
 });
+
+
 
 
 
