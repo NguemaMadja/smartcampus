@@ -38,7 +38,6 @@
     </div>
   </div>
 </nav>
-
 <div class="container mt-4">
   <div class="d-flex justify-content-between mb-3">
     <a href="admin.html" class="btn btn-outline-secondary btn-rounded">⬅️ Volver al Panel Principal</a>
@@ -84,6 +83,21 @@
   </div></div>
 </div>
 
+<!-- Modal Editar Sensor -->
+<div class="modal fade" id="modalEditarSensor" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Editar Sensor</h5></div>
+    <div class="modal-body">
+      <form id="formEditar">
+        <input type="hidden" id="editarIdSensor">
+        <div class="mb-3"><label class="form-label">Tipo</label><select class="form-select" id="editarTipo"></select></div>
+        <div class="mb-3"><label class="form-label">Aula</label><select class="form-select" id="editarAula"></select></div>
+        <div class="mb-3"><label class="form-label">Ubicación</label><input type="text" class="form-control" id="editarUbicacion"></div>
+        <button type="submit" class="btn btn-primary btn-rounded">Guardar Cambios</button>
+      </form>
+    </div>
+  </div></div>
+</div>
 <!-- Modal Tipos de Sensores -->
 <div class="modal fade" id="modalTipos" tabindex="-1">
   <div class="modal-dialog modal-lg"><div class="modal-content">
@@ -123,6 +137,7 @@
     <div class="modal-body"><canvas id="graficoSensor"></canvas></div>
   </div></div>
 </div>
+
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS -UNGE- @ IoT A NUESTRO ALCANCE - 2026
 </footer>
@@ -135,28 +150,18 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   $(document).ready(function() {
-    // Inicializar DataTable con mapeo de columnas y dataSrc
     const tablaSensores = $('#tablaSensores').DataTable({
-      ajax: {
-        url: '/sensores',
-        dataSrc: ""   // 👈 tu backend devuelve un array plano
-      },
+      ajax: { url: '/sensores', dataSrc: "" },
       columns: [
-        { data: 'id_sensor', title: 'ID Sensor' },
-        { data: 'tipo', title: 'Tipo' },
-        { data: 'aula', title: 'Aula' },
-        { data: 'ubicacion', title: 'Ubicación' },
-        { data: 'valor', title: 'Valor', defaultContent: '-' },
-        { data: 'fecha', title: 'Fecha', defaultContent: '-' },
-        { data: 'hora', title: 'Hora', defaultContent: '-' },
-        { data: null, title: 'Acciones', render: (data, type, row) => `
+        { data: 'id_sensor' }, { data: 'tipo' }, { data: 'aula' },
+        { data: 'ubicacion' }, { data: 'valor', defaultContent: '-' },
+        { data: 'fecha', defaultContent: '-' }, { data: 'hora', defaultContent: '-' },
+        { data: null, render: (data, type, row) => `
           <button class="btn btn-primary btn-sm btnGrafico" data-id="${row.id_sensor}">📊</button>
           <button class="btn btn-warning btn-sm btnEditar" data-id="${row.id_sensor}">✏️</button>
-          <button class="btn btn-danger btn-sm btnEliminar" data-id="${row.id_sensor}">🗑️</button>
-        `}
+          <button class="btn btn-danger btn-sm btnEliminar" data-id="${row.id_sensor}">🗑️</button>` }
       ],
-      dom: 'Bfrtip',
-      buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+      dom: 'Bfrtip', buttons: ['copy','csv','excel','pdf','print']
     });
 
     const tablaTipos = $('#tablaTipos').DataTable();
@@ -219,10 +224,10 @@
       fetch("/tipos_sensores")
         .then(res => res.json())
         .then(data => {
-          $('#tipo').empty();
+          $('#tipo,#editarTipo').empty();
           tablaTipos.clear();
           data.forEach(t => {
-            $('#tipo').append(`<option value="${t.id_tipo}">${t.nombre}</option>`);
+            $('#tipo,#editarTipo').append(`<option value="${t.id_tipo}">${t.nombre}</option>`);
             tablaTipos.row.add([
               t.id_tipo,
               t.nombre,
@@ -239,9 +244,9 @@
       fetch("/aulas")
         .then(res => res.json())
         .then(data => {
-          $('#aula').empty();
+          $('#aula,#editarAula').empty();
           data.forEach(a => {
-            $('#aula').append(`<option value="${a.id_aula}">${a.nombre}</option>`);
+            $('#aula,#editarAula').append(`<option value="${a.id_aula}">${a.nombre}</option>`);
           });
         });
     }
@@ -264,6 +269,37 @@
       });
     });
 
+    // Editar sensor
+    $('#tablaSensores').on('click', '.btnEditar', function(){
+      const id = $(this).data('id');
+      fetch(`/sensores/${id}`)
+        .then(res => res.json())
+        .then(sensor => {
+          $('#editarIdSensor').val(sensor.id_sensor);
+          $('#editarUbicacion').val(sensor.ubicacion);
+          cargarTipos();
+          cargarAulas();
+          $('#editarTipo').val(sensor.id_tipo);
+          $('#editarAula').val(sensor.id_aula);
+          $('#modalEditarSensor').modal('show');
+        });
+    });
+    $('#formEditar').on('submit', function(e){
+      e.preventDefault();
+      const id = $('#editarIdSensor').val();
+      const id_tipo = $('#editarTipo').val();
+      const id_aula = $('#editarAula').val();
+      const ubicacion = $('#editarUbicacion').val();
+      fetch(`/sensores/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_tipo, id_aula, ubicacion })
+      }).then(() => {
+        $('#modalEditarSensor').modal('hide');
+        tablaSensores.ajax.reload();
+      });
+    });
+
     // Registrar tipo de sensor
     $('#formTipo').on('submit', function(e){
       e.preventDefault();
@@ -277,12 +313,13 @@
         cargarTipos();
       });
     });
-
-    // Eliminar tipo de sensor
+    // Eliminar tipo de sensor con confirmación
     $('#tablaTipos').on('click', '.btnEliminarTipo', function(){
       const id = $(this).data('id');
-      fetch(`/tipos_sensores/${id}`, { method: "DELETE" })
-        .then(() => cargarTipos());
+      if(confirm("¿Seguro que deseas eliminar este tipo de sensor?")){
+        fetch(`/tipos_sensores/${id}`, { method: "DELETE" })
+          .then(() => cargarTipos());
+      }
     });
 
     // Editar tipo de sensor (abrir modal)
@@ -308,11 +345,13 @@
       });
     });
 
-    // Eliminar sensor
+    // Eliminar sensor con confirmación
     $('#tablaSensores').on('click', '.btnEliminar', function(){
       const id = $(this).data('id');
-      fetch(`/sensores/${id}`, { method: "DELETE" })
-        .then(() => tablaSensores.ajax.reload());
+      if(confirm("¿Seguro que deseas eliminar este sensor?")){
+        fetch(`/sensores/${id}`, { method: "DELETE" })
+          .then(() => tablaSensores.ajax.reload());
+      }
     });
   });
 </script>
