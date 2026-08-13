@@ -146,7 +146,7 @@
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 
   <script>
-    // 🔹 Cargar departamentos y carreras reales
+    // 🔹 Cargar departamentos
     function cargarDepartamentos() {
       fetch("https://smarcampus.onrender.com/departamentos")
         .then(res => res.json())
@@ -163,6 +163,7 @@
         .catch(err => console.error("Error cargando departamentos:", err));
     }
 
+    // 🔹 Cargar carreras
     function cargarCarreras() {
       fetch("https://smarcampus.onrender.com/carreras")
         .then(res => res.json())
@@ -179,7 +180,7 @@
         .catch(err => console.error("Error cargando carreras:", err));
     }
 
-    // 🔹 Cargar métricas reales
+    // 🔹 Cargar métricas
     function cargarMetricas(params = {}) {
       let url = "https://smarcampus.onrender.com/asistencia/metricas";
       const query = new URLSearchParams(params).toString();
@@ -202,7 +203,7 @@
         .catch(err => console.error("Error cargando métricas:", err));
     }
 
-    // 🔹 Cargar gráfica real
+    // 🔹 Cargar gráfica
     function cargarGrafica(params = {}) {
       let url = "https://smarcampus.onrender.com/asistencia/grafica";
       const query = new URLSearchParams(params).toString();
@@ -290,6 +291,86 @@
     cargarAsistencia();
     cargarMetricas();
     cargarGrafica();
+  </script>
+  <!-- Modal de edición -->
+  <div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-warning">
+          <h5 class="modal-title" id="modalEditarLabel">Editar Asistencia</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formEditar">
+            <input type="hidden" id="editIdAsistencia">
+            <div class="mb-3">
+              <label class="form-label">Profesor</label>
+              <input type="text" class="form-control" id="editProfesor">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Fecha</label>
+              <input type="date" class="form-control" id="editFecha">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Hora de entrada</label>
+              <input type="time" class="form-control" id="editHoraEntrada">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Validación</label>
+              <select class="form-select" id="editValidacion">
+                <option value="true">✔️ Sí</option>
+                <option value="false">❌ No</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnGuardarCambios">Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Evento para abrir modal de edición
+    $('#tablaAsistencia').on('click', '.btn-warning', function () {
+      const data = tabla.row($(this).parents('tr')).data();
+      if (data) {
+        $('#editIdAsistencia').val(data.id_asistencia);
+        $('#editProfesor').val(data.profesor);
+        $('#editFecha').val(data.fecha);
+        $('#editHoraEntrada').val(data.hora_entrada);
+        $('#editValidacion').val(data.validacion ? "true" : "false");
+        $('#modalEditar').modal('show');
+      }
+    });
+
+    // Guardar cambios
+    document.getElementById("btnGuardarCambios").addEventListener("click", function() {
+      const id = document.getElementById("editIdAsistencia").value;
+      const payload = {
+        profesor: document.getElementById("editProfesor").value,
+        fecha: document.getElementById("editFecha").value,
+        hora_entrada: document.getElementById("editHoraEntrada").value,
+        validacion: document.getElementById("editValidacion").value === "true"
+      };
+
+      fetch("https://smarcampus.onrender.com/asistencia/" + id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      .then(res => {
+        if (res.ok) {
+          tabla.ajax.reload();
+          $('#modalEditar').modal('hide');
+        } else {
+          alert("Error al actualizar asistencia");
+        }
+      })
+      .catch(err => console.error("Error:", err));
+    });
   </script>
 </body>
 </html>
