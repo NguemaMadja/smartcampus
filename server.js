@@ -1642,86 +1642,60 @@ app.get('/sensores/:id/historial', async (req, res) => {
 
 
 
+// ---------------- QR DE AULAS ----------------
 
-// ---------------- QR Y ASISTENCIA ----------------
-
-// Generar QR para un aula (semanal)
-app.post('/aulas/:id/generar_qr', async (req, res) => {
+// Generar QR para un aula (vigente por 7 días)
+app.post('/aulas/:id/qr', async (req, res) => {
   const { id } = req.params;
   const codigoQR = Math.random().toString(36).substring(2, 10);
 
-  const fechaInicio = new Date();
-  const fechaFin = new Date();
-  fechaFin.setDate(fechaInicio.getDate() + 7);
+  const fechaGeneracion = new Date();
+  const validoHasta = new Date();
+  validoHasta.setDate(fechaGeneracion.getDate() + 7);
 
   const result = await pool.query(
-    `INSERT INTO aula_qr (id_aula, codigo_qr, fecha_inicio, fecha_fin)
+    `INSERT INTO qr_aulas (id_aula, codigo_qr, fecha_generacion, valido_hasta)
      VALUES ($1, $2, $3, $4) RETURNING *`,
-    [id, codigoQR, fechaInicio, fechaFin]
+    [id, codigoQR, fechaGeneracion, validoHasta]
   );
-
-  await registrarAccion({
-    id_usuario: null,
-    accion: 'CREAR',
-    modulo: 'Aulas',
-    detalle: `QR generado para aula ${id}`,
-    dispositivo: 'Web',
-    ip: req.ip,
-    resultado: 'OK',
-    duracion_segundos: 0
-  });
 
   const qrImage = await QRCode.toDataURL(codigoQR);
   res.json({ aula: id, codigo_qr: codigoQR, qr_image: qrImage, registro: result.rows[0] });
 });
 
-// Obtener QR actual de un aula
+// Obtener QR vigente de un aula
 app.get('/aulas/:id/qr', async (req, res) => {
   const { id } = req.params;
   const hoy = new Date();
 
   const result = await pool.query(
-    `SELECT codigo_qr FROM aula_qr
-     WHERE id_aula=$1 AND $2 BETWEEN fecha_inicio AND fecha_fin
-     ORDER BY fecha_inicio DESC LIMIT 1`,
+    `SELECT codigo_qr FROM qr_aulas
+     WHERE id_aula=$1 AND $2 BETWEEN fecha_generacion AND valido_hasta
+     ORDER BY fecha_generacion DESC LIMIT 1`,
     [id, hoy]
   );
 
   if (!result.rows.length) return res.status(404).json({ error: 'QR no encontrado o vencido' });
-
-  await registrarAccion({
-    id_usuario: null,
-    accion: 'CONSULTAR',
-    modulo: 'Aulas',
-    detalle: `Consulta QR vigente del aula ${id}`,
-    dispositivo: 'Web',
-    ip: req.ip,
-    resultado: 'OK',
-    duracion_segundos: 0
-  });
 
   const codigoQR = result.rows[0].codigo_qr;
   const qrImage = await QRCode.toDataURL(codigoQR);
   res.json({ aula: id, codigo_qr: codigoQR, qr_image: qrImage });
 });
 
-// ---------------- ASISTENCIA ----------------
+// ---------------- ASISTENCIA PROFESORES ----------------
 
 // Registrar asistencia profesor usando QR vigente
 app.post('/asistencia', async (req, res) => {
   const { id_profesor, id_aula, estado, codigo_qr } = req.body;
-
   try {
     const hoy = new Date();
 
-    // Buscar QR vigente para el aula
+    // Validar QR vigente
     const result = await pool.query(
-      `SELECT id_qr, codigo_qr 
+      `SELECT id_qr, codigo_qr, id_asignatura
        FROM qr_aulas
-       WHERE id_aula = $1 
-         AND $2 BETWEEN fecha_generacion AND valido_hasta
-       ORDER BY fecha_generacion DESC 
-       LIMIT 1`,
+       WHERE id_aula = $1 AND $2 BETWEEN fecha_generacion AND valido_hasta
+       ORDER BY fecha_generacion DESC LIMIT 1`,
       [id_aula, hoy]
     );
 
@@ -1730,38 +1704,27 @@ app.post('/asistencia', async (req, res) => {
     }
 
     const id_qr = result.rows[0].id_qr;
+    const id_asignatura = result.rows[0].id_asignatura;
 
-    // Insertar asistencia
     await pool.query(
       `INSERT INTO asistencia (
          id_profesor, id_departamento, id_carrera, id_asignatura, id_aula,
          fecha, hora_entrada, validacion, codigo_qr, id_qr
        )
        VALUES (
-         $1, 
-         (SELECT id_departamento FROM asistencia WHERE id_profesor=$1 LIMIT 1),
-         (SELECT id_carrera FROM asistencia WHERE id_profesor=$1 LIMIT 1),
-         (SELECT id_asignatura FROM qr_aulas WHERE id_qr=$2),
+         $1,
+         (SELECT id_departamento FROM profesores WHERE id_profesor=$1),
+         (SELECT id_carrera FROM profesores WHERE id_profesor=$1),
+         $2,
          $3,
          CURRENT_DATE,
          CURRENT_TIMESTAMP,
          $4,
          $5,
-         $2
+         $6
        )`,
-      [id_profesor, id_qr, id_aula, estado, codigo_qr]
+      [id_profesor, id_asignatura, id_aula, estado, codigo_qr, id_qr]
     );
-
-    await registrarAccion({
-      id_usuario: null,
-      accion: 'CREAR',
-      modulo: 'Asistencia Profesores',
-      detalle: `Asistencia registrada para profesor ${id_profesor} en aula ${id_aula}`,
-      dispositivo: 'Web',
-      ip: req.ip,
-      resultado: 'OK',
-      duracion_segundos: 0
-    });
 
     res.json({ message: 'Asistencia registrada correctamente' });
   } catch (err) {
@@ -1769,81 +1732,17 @@ app.post('/asistencia', async (req, res) => {
   }
 });
 
-
-
-// ---------------- MÉTRICAS DE ASISTENCIA ----------------
-app.get('/asistencia/metricas', async (req, res) => {
-  try {
-    const hoy = new Date().toISOString().split('T')[0];
-
-    const asistenciasHoy = await pool.query(
-      `SELECT COUNT(*) FROM asistencia WHERE fecha = $1 AND validacion = true`,
-      [hoy]
-    );
-
-    const noValidadasHoy = await pool.query(
-      `SELECT COUNT(*) FROM asistencia WHERE fecha = $1 AND validacion = false`,
-      [hoy]
-    );
-
-    const totalProfesores = await pool.query(`SELECT COUNT(*) FROM profesores`);
-
-    res.json({
-      asistencias_hoy: parseInt(asistenciasHoy.rows[0].count),
-      no_validadas: parseInt(noValidadasHoy.rows[0].count),
-      total_profesores: parseInt(totalProfesores.rows[0].count)
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-// ---------------- GRÁFICA DE ASISTENCIA ----------------
-app.get('/asistencia/grafica', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT fecha, COUNT(*) AS total
-       FROM asistencia
-       WHERE validacion = true
-       GROUP BY fecha
-       ORDER BY fecha ASC
-       LIMIT 7`
-    );
-
-    res.json({
-      labels: result.rows.map(r => r.fecha),
-      values: result.rows.map(r => parseInt(r.total))
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-
-
-// ---------------- LISTAR ASISTENCIA ----------------
+// Listar asistencias con filtros
 app.get('/asistencia', async (req, res) => {
   try {
     const { departamento, carrera, fecha } = req.query;
-
     let filtros = [];
     let valores = [];
     let i = 1;
 
-    if (departamento) {
-      filtros.push(`a.id_departamento = $${i++}`);
-      valores.push(departamento);
-    }
-    if (carrera) {
-      filtros.push(`a.id_carrera = $${i++}`);
-      valores.push(carrera);
-    }
-    if (fecha) {
-      filtros.push(`a.fecha = $${i++}`);
-      valores.push(fecha);
-    }
+    if (departamento) { filtros.push(`a.id_departamento = $${i++}`); valores.push(departamento); }
+    if (carrera) { filtros.push(`a.id_carrera = $${i++}`); valores.push(carrera); }
+    if (fecha) { filtros.push(`a.fecha = $${i++}`); valores.push(fecha); }
 
     const where = filtros.length ? `WHERE ${filtros.join(" AND ")}` : "";
 
@@ -1872,99 +1771,102 @@ app.get('/asistencia', async (req, res) => {
 
     res.json(result.rows);
   } catch (err) {
-    console.error("Error listando asistencias:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-
-
-// ---------------- LISTAR ASISTENCIA ----------------
-app.get('/asistencia', async (req, res) => {
+// Obtener asistencia por ID
+app.get('/asistencia/:id', async (req, res) => {
   try {
-    const { departamento, carrera, fecha } = req.query;
+    const { id } = req.params;
+    const result = await pool.query(`SELECT * FROM asistencia WHERE id_asistencia=$1`, [id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'No encontrada' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    // Filtros dinámicos
-    let filtros = [];
-    let valores = [];
-    let i = 1;
+// Actualizar asistencia
+app.put('/asistencia/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { profesor, fecha, hora_entrada, validacion } = req.body;
+    await pool.query(
+      `UPDATE asistencia
+       SET fecha=$2, hora_entrada=$3, validacion=$4
+       WHERE id_asistencia=$1`,
+      [id, fecha, hora_entrada, validacion]
+    );
+    res.json({ message: 'Asistencia actualizada' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    if (departamento) {
-      filtros.push(`a.id_departamento = $${i++}`);
-      valores.push(departamento);
-    }
-    if (carrera) {
-      filtros.push(`a.id_carrera = $${i++}`);
-      valores.push(carrera);
-    }
-    if (fecha) {
-      filtros.push(`a.fecha = $${i++}`);
-      valores.push(fecha);
-    }
+// Eliminar asistencia
+app.delete('/asistencia/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query(`DELETE FROM asistencia WHERE id_asistencia=$1`, [id]);
+    res.json({ message: 'Asistencia eliminada' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    const where = filtros.length ? `WHERE ${filtros.join(" AND ")}` : "";
+// ---------------- MÉTRICAS DE ASISTENCIA ----------------
+app.get('/asistencia/metricas', async (req, res) => {
+  try {
+    const hoy = new Date().toISOString().split('T')[0];
 
-    const result = await pool.query(
-      `SELECT a.id_asistencia,
-              p.nombre AS profesor,
-              d.nombre AS departamento,
-              c.nombre AS carrera,
-              asig.nombre AS asignatura,
-              au.nombre AS aula,
-              a.fecha,
-              a.hora_entrada,
-              a.validacion,
-              a.codigo_qr
-       FROM asistencia a
-       JOIN profesores p ON a.id_profesor = p.id_profesor
-       JOIN departamentos d ON a.id_departamento = d.id_departamento
-       JOIN carreras c ON a.id_carrera = c.id_carrera
-       JOIN asignaturas asig ON a.id_asignatura = asig.id_asignatura
-       JOIN aulas au ON a.id_aula = au.id_aula
-       ${where}
-       ORDER BY a.fecha DESC, a.hora_entrada DESC`,
-      valores
+    const asistenciasHoy = await pool.query(
+      `SELECT COUNT(*) FROM asistencia WHERE fecha = $1 AND validacion = true`,
+      [hoy]
     );
 
-    res.json(result.rows);
+    const faltasHoy = await pool.query(
+      `SELECT COUNT(*) FROM asistencia WHERE fecha = $1 AND validacion = false`,
+      [hoy]
+    );
+
+    const totalProfesores = await pool.query(`SELECT COUNT(*) FROM profesores`);
+
+    res.json({
+      asistencias_hoy: parseInt(asistenciasHoy.rows[0].count),
+      faltas: parseInt(faltasHoy.rows[0].count),
+      total_profesores: parseInt(totalProfesores.rows[0].count)
+    });
   } catch (err) {
-    console.error("Error listando asistencias:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-
-// ---------------- LISTAR ASISTENCIA PROFESORES ----------------
-
-app.get('/asistencia_profesores', async (req, res) => {
+// ---------------- GRÁFICA DE ASISTENCIA ----------------
+app.get('/asistencia/grafica', async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT 
-        a.id_asistencia,
-        u.nombre AS profesor,
-        d.nombre AS departamento,
-        c.nombre AS carrera,
-        asig.nombre AS asignatura,
-        au.nombre AS aula,
-        a.fecha,
-        a.hora_entrada,
-        a.validacion,
-        a.codigo_qr
-      FROM asistencia a
-      LEFT JOIN profesores p ON a.id_profesor = p.id_profesor
-      LEFT JOIN usuarios u ON p.id_usuario = u.id_usuario
-      LEFT JOIN departamentos d ON a.id_departamento = d.id_departamento
-      LEFT JOIN carreras c ON a.id_carrera = c.id_carrera
-      LEFT JOIN asignaturas asig ON a.id_asignatura = asig.id_asignatura
-      LEFT JOIN aulas au ON a.id_aula = au.id_aula
-      ORDER BY a.id_asistencia ASC;
-    `);
+    const result = await pool.query(
+      `SELECT fecha, COUNT(*) AS total
+       FROM asistencia
+       WHERE validacion = true
+       GROUP BY fecha
+       ORDER BY fecha ASC
+       LIMIT 7`
+    );
 
-    res.json({ data: result.rows }); // 👈 DataTables espera {data: [...]}
+    res.json({
+      labels: result.rows.map(r => r.fecha),
+      values: result.rows.map(r => parseInt(r.total))
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+
+
+
 
 
 // ---------------- CRON JOB SEMANAL ----------------
