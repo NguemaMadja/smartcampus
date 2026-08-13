@@ -101,6 +101,21 @@
   </div></div>
 </div>
 
+<!-- Modal Editar Tipo de Sensor -->
+<div class="modal fade" id="modalEditarTipo" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Editar Tipo de Sensor</h5></div>
+    <div class="modal-body">
+      <input type="hidden" id="editarIdTipo">
+      <div class="mb-3">
+        <label for="editarNombreTipo" class="form-label">Nombre</label>
+        <input type="text" class="form-control" id="editarNombreTipo">
+      </div>
+      <button type="button" class="btn btn-primary btn-rounded" id="guardarEdicionTipo">Guardar Cambios</button>
+    </div>
+  </div></div>
+</div>
+
 <!-- Modal Gráfico -->
 <div class="modal fade" id="modalGrafico" tabindex="-1">
   <div class="modal-dialog modal-lg"><div class="modal-content">
@@ -118,14 +133,13 @@
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
   $(document).ready(function() {
     // Inicializar DataTable con mapeo de columnas y dataSrc
     const tablaSensores = $('#tablaSensores').DataTable({
       ajax: {
         url: '/sensores',
-        dataSrc: ""   // 👈 importante: tu backend devuelve un array plano
+        dataSrc: ""   // 👈 tu backend devuelve un array plano
       },
       columns: [
         { data: 'id_sensor', title: 'ID Sensor' },
@@ -209,8 +223,14 @@
           tablaTipos.clear();
           data.forEach(t => {
             $('#tipo').append(`<option value="${t.id_tipo}">${t.nombre}</option>`);
-            tablaTipos.row.add([t.id_tipo, t.nombre,
-              `<button class="btn btn-danger btn-sm btnEliminarTipo" data-id="${t.id_tipo}">🗑️</button>`]);
+            tablaTipos.row.add([
+              t.id_tipo,
+              t.nombre,
+              `
+                <button class="btn btn-warning btn-sm btnEditarTipo" data-id="${t.id_tipo}" data-nombre="${t.nombre}">✏️</button>
+                <button class="btn btn-danger btn-sm btnEliminarTipo" data-id="${t.id_tipo}">🗑️</button>
+              `
+            ]);
           });
           tablaTipos.draw();
         });
@@ -263,6 +283,29 @@
       const id = $(this).data('id');
       fetch(`/tipos_sensores/${id}`, { method: "DELETE" })
         .then(() => cargarTipos());
+    });
+
+    // Editar tipo de sensor (abrir modal)
+    $('#tablaTipos').on('click', '.btnEditarTipo', function(){
+      const id = $(this).data('id');
+      const nombre = $(this).data('nombre');
+      $('#editarIdTipo').val(id);
+      $('#editarNombreTipo').val(nombre);
+      $('#modalEditarTipo').modal('show');
+    });
+
+    // Guardar edición de tipo de sensor
+    $('#guardarEdicionTipo').on('click', function(){
+      const id = $('#editarIdTipo').val();
+      const nombre = $('#editarNombreTipo').val();
+      fetch(`/tipos_sensores/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre })
+      }).then(() => {
+        $('#modalEditarTipo').modal('hide');
+        cargarTipos();
+      });
     });
 
     // Eliminar sensor
