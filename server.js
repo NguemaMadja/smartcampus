@@ -1484,8 +1484,8 @@ app.get('/sensores', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT s.id_sensor,
-             ts.nombre AS tipo,        -- usamos siempre el nombre desde tipos_sensores
-             a.nombre AS aula,
+             ts.nombre AS tipo,
+             a.codigo || ' - ' || a.nombre AS aula,
              s.ubicacion,
              l.valor, l.fecha, l.hora
       FROM sensores s
@@ -1501,16 +1501,13 @@ app.get('/sensores', async (req, res) => {
       ORDER BY s.id_sensor;
     `);
 
-    // 👇 Esto lo puedes dejar para depuración
-    console.log(result.rows[0]);
-
-    // 👇 Esto envía la respuesta al frontend
     res.json(result.rows);
   } catch (err) {
     console.error(err);
     res.status(500).send('Error al obtener sensores');
   }
 });
+
 
     // 👇 Aquí imprimes el primer registro en la consola del servidor
     console.log(result.rows[0]);
