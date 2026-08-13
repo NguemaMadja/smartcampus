@@ -113,11 +113,15 @@ app.delete("/videoclases/:id", async (req, res) => {
   res.json({ mensaje: "Videoclase eliminada" });
 });
 
-// === Sensores ===
-app.get("/sensores", async (req, res) => {
-  const result = await pool.query("SELECT * FROM sensores");
-  res.json(result.rows);
-});
+
+
+
+
+
+
+
+
+
 
 // === Métricas WiFi ===
 app.get("/metricaswifi", async (req, res) => {
