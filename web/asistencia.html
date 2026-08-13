@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- 🔹 Responsivo -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Smart Campus Guide - Asistencia</title>
   <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -10,7 +10,6 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <!-- DataTables -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
 </head>
 <body>
   <!-- Cabecera -->
@@ -143,234 +142,157 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-
-  <script>
-    // 🔹 Cargar departamentos
-    function cargarDepartamentos() {
-      fetch("https://smarcampus.onrender.com/departamentos")
-        .then(res => res.json())
-        .then(deps => {
-          const select = document.getElementById("filtroDepartamento");
-          select.innerHTML = '<option value="">Todos</option>';
-          deps.forEach(d => {
-            const opt = document.createElement("option");
-            opt.value = d.id_departamento;
-            opt.textContent = d.nombre;
-            select.appendChild(opt);
-          });
-        })
-        .catch(err => console.error("Error cargando departamentos:", err));
-    }
-
-    // 🔹 Cargar carreras
-    function cargarCarreras() {
-      fetch("https://smarcampus.onrender.com/carreras")
-        .then(res => res.json())
-        .then(cars => {
-          const select = document.getElementById("filtroCarrera");
-          select.innerHTML = '<option value="">Todas</option>';
-          cars.forEach(c => {
-            const opt = document.createElement("option");
-            opt.value = c.id_carrera;
-            opt.textContent = c.nombre;
-            select.appendChild(opt);
-          });
-        })
-        .catch(err => console.error("Error cargando carreras:", err));
-    }
-
-    // 🔹 Cargar métricas
-    function cargarMetricas(params = {}) {
-      let url = "https://smarcampus.onrender.com/asistencia/metricas";
-      const query = new URLSearchParams(params).toString();
-      if (query) url += "?" + query;
-
-      fetch(url)
-        .then(res => res.json())
-        .then(m => {
-          document.getElementById("metricAsistencias").textContent = m.asistencias_hoy ?? 0;
-          document.getElementById("metricTardanzas").textContent = m.tardanzas ?? 0;
-          document.getElementById("metricTotal").textContent = m.total_profesores ?? 0;
-
-          if (m.faltas !== undefined) {
-            document.getElementById("metricFaltas").textContent = m.faltas;
-            document.getElementById("cardFaltas").style.display = "block";
-          } else {
-            document.getElementById("cardFaltas").style.display = "none";
-          }
-        })
-        .catch(err => console.error("Error cargando métricas:", err));
-    }
-
-    // 🔹 Cargar gráfica
-    function cargarGrafica(params = {}) {
-      let url = "https://smarcampus.onrender.com/asistencia/grafica";
-      const query = new URLSearchParams(params).toString();
-      if (query) url += "?" + query;
-
-      fetch(url)
-        .then(res => res.json())
-        .then(datos => {
-          const ctx = document.getElementById('graficaAsistencia');
-          new Chart(ctx, {
-            type: 'bar',
-            data: {
-              labels: datos.labels,
-              datasets: [{
-                label: 'Asistencias',
-                data: datos.values,
-                backgroundColor: 'rgba(54, 162, 235, 0.7)'
-              }]
+</head>
+<script>
+  // 🔹 Inicializar tabla de asistencia
+  let tabla;
+  function cargarAsistencia(params = {}) {
+    if (tabla) {
+      tabla.ajax.url("https://smarcampus.onrender.com/asistencia?" + new URLSearchParams(params)).load();
+    } else {
+      tabla = $('#tablaAsistencia').DataTable({
+        ajax: {
+          url: "https://smarcampus.onrender.com/asistencia",
+          dataSrc: ""
+        },
+        scrollX: true,       // 🔹 habilita scroll horizontal
+        responsive: false,   // 🔹 desactiva ocultamiento automático
+        autoWidth: false,    // 🔹 evita que DataTables ajuste columnas ocultando
+        columns: [
+          { data: 'id_asistencia', title: 'ID Asistencia' },
+          { data: 'profesor', title: 'Profesor' },
+          { data: 'departamento', title: 'Departamento' },
+          { data: 'carrera', title: 'Carrera' },
+          { data: 'asignatura', title: 'Asignatura' },
+          { data: 'aula', title: 'Aula' },
+          { data: 'fecha', title: 'Fecha' },
+          { data: 'hora_entrada', title: 'Hora de entrada' },
+          {
+            data: 'validacion',
+            title: 'Validación',
+            render: function (val) {
+              return val 
+                ? '<span class="badge bg-success">✔️ Sí</span>' 
+                : '<span class="badge bg-danger">❌ No</span>';
             }
-          });
-        })
-        .catch(err => console.error("Error cargando gráfica:", err));
-    }
-
-    // 🔹 Inicializar tabla de asistencia
-    let tabla;
-    function cargarAsistencia(params = {}) {
-      if (tabla) {
-        tabla.ajax.url("https://smarcampus.onrender.com/asistencia?" + new URLSearchParams(params)).load();
-      } else {
-        tabla = $('#tablaAsistencia').DataTable({
-          ajax: {
-            url: "https://smarcampus.onrender.com/asistencia",
-            dataSrc: ""
           },
-          responsive: true,
-          columns: [
-            { data: 'id_asistencia' },
-            { data: 'profesor' },
-            { data: 'departamento' },
-            { data: 'carrera' },
-            { data: 'asignatura' },
-            { data: 'aula' },
-            { data: 'fecha' },
-            { data: 'hora_entrada' },
-            {
-              data: 'validacion',
-              render: function (val) {
-                return val 
-                  ? '<span class="badge bg-success">✔️ Sí</span>' 
-                  : '<span class="badge bg-danger">❌ No</span>';
-              }
-            },
-            { data: 'codigo_qr' },
-            {
-              data: null,
-              render: function (row) {
-                return `
-                  <button class="btn btn-sm btn-warning me-1"><i class="fas fa-edit"></i></button>
-                  <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-                `;
-              }
+          { data: 'codigo_qr', title: 'Código QR' },
+          {
+            data: null,
+            title: 'Acciones',
+            orderable: false,
+            render: function () {
+              return `
+                <button class="btn btn-sm btn-warning me-1"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+              `;
             }
-          ]
-        });
-      }
+          }
+        ]
+      });
     }
+  }
 
-    // 🔹 Botón de filtros
-    document.getElementById("formFiltros").addEventListener("submit", function(e) {
-      e.preventDefault();
-      const params = {
-        departamento: document.getElementById("filtroDepartamento").value,
-        carrera: document.getElementById("filtroCarrera").value,
-        fecha: document.getElementById("filtroFecha").value
-      };
-      cargarAsistencia(params);
-      cargarMetricas(params);
-      cargarGrafica(params);
-    });
+  // 🔹 Botón de filtros
+  document.getElementById("formFiltros").addEventListener("submit", function(e) {
+    e.preventDefault();
+    const params = {
+      departamento: document.getElementById("filtroDepartamento").value,
+      carrera: document.getElementById("filtroCarrera").value,
+      fecha: document.getElementById("filtroFecha").value
+    };
+    cargarAsistencia(params);
+    cargarMetricas(params);
+    cargarGrafica(params);
+  });
 
-    // 🔹 Inicialización al cargar la página
-    cargarDepartamentos();
-    cargarCarreras();
-    cargarAsistencia();
-    cargarMetricas();
-    cargarGrafica();
-  </script>
-  <!-- Modal de edición -->
-  <div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header bg-warning">
-          <h5 class="modal-title" id="modalEditarLabel">Editar Asistencia</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-        <div class="modal-body">
-          <form id="formEditar">
-            <input type="hidden" id="editIdAsistencia">
-            <div class="mb-3">
-              <label class="form-label">Profesor</label>
-              <input type="text" class="form-control" id="editProfesor">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Fecha</label>
-              <input type="date" class="form-control" id="editFecha">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Hora de entrada</label>
-              <input type="time" class="form-control" id="editHoraEntrada">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Validación</label>
-              <select class="form-select" id="editValidacion">
-                <option value="true">✔️ Sí</option>
-                <option value="false">❌ No</option>
-              </select>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-primary" id="btnGuardarCambios">Guardar cambios</button>
-        </div>
+  // 🔹 Inicialización al cargar la página
+  cargarDepartamentos();
+  cargarCarreras();
+  cargarAsistencia();
+  cargarMetricas();
+  cargarGrafica();
+</script>
+
+<!-- Modal de edición -->
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title" id="modalEditarLabel">Editar Asistencia</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formEditar">
+          <input type="hidden" id="editIdAsistencia">
+          <div class="mb-3">
+            <label class="form-label">Profesor</label>
+            <input type="text" class="form-control" id="editProfesor">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Fecha</label>
+            <input type="date" class="form-control" id="editFecha">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Hora de entrada</label>
+            <input type="time" class="form-control" id="editHoraEntrada">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Validación</label>
+            <select class="form-select" id="editValidacion">
+              <option value="true">✔️ Sí</option>
+              <option value="false">❌ No</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnGuardarCambios">Guardar cambios</button>
       </div>
     </div>
   </div>
+</div>
 
-  <script>
-    // Evento para abrir modal de edición
-    $('#tablaAsistencia').on('click', '.btn-warning', function () {
-      const data = tabla.row($(this).parents('tr')).data();
-      if (data) {
-        $('#editIdAsistencia').val(data.id_asistencia);
-        $('#editProfesor').val(data.profesor);
-        $('#editFecha').val(data.fecha);
-        $('#editHoraEntrada').val(data.hora_entrada);
-        $('#editValidacion').val(data.validacion ? "true" : "false");
-        $('#modalEditar').modal('show');
+<script>
+  // Evento para abrir modal de edición
+  $('#tablaAsistencia').on('click', '.btn-warning', function () {
+    const data = tabla.row($(this).parents('tr')).data();
+    if (data) {
+      $('#editIdAsistencia').val(data.id_asistencia);
+      $('#editProfesor').val(data.profesor);
+      $('#editFecha').val(data.fecha);
+      $('#editHoraEntrada').val(data.hora_entrada);
+      $('#editValidacion').val(data.validacion ? "true" : "false");
+      $('#modalEditar').modal('show');
+    }
+  });
+
+  // Guardar cambios
+  document.getElementById("btnGuardarCambios").addEventListener("click", function() {
+    const id = document.getElementById("editIdAsistencia").value;
+    const payload = {
+      profesor: document.getElementById("editProfesor").value,
+      fecha: document.getElementById("editFecha").value,
+      hora_entrada: document.getElementById("editHoraEntrada").value,
+      validacion: document.getElementById("editValidacion").value === "true"
+    };
+
+    fetch("https://smarcampus.onrender.com/asistencia/" + id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(res => {
+      if (res.ok) {
+        tabla.ajax.reload();
+        $('#modalEditar').modal('hide');
+      } else {
+        alert("Error al actualizar asistencia");
       }
-    });
-
-    // Guardar cambios
-    document.getElementById("btnGuardarCambios").addEventListener("click", function() {
-      const id = document.getElementById("editIdAsistencia").value;
-      const payload = {
-        profesor: document.getElementById("editProfesor").value,
-        fecha: document.getElementById("editFecha").value,
-        hora_entrada: document.getElementById("editHoraEntrada").value,
-        validacion: document.getElementById("editValidacion").value === "true"
-      };
-
-      fetch("https://smarcampus.onrender.com/asistencia/" + id, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      })
-      .then(res => {
-        if (res.ok) {
-          tabla.ajax.reload();
-          $('#modalEditar').modal('hide');
-        } else {
-          alert("Error al actualizar asistencia");
-        }
-      })
-      .catch(err => console.error("Error:", err));
-    });
-  </script>
+    })
+    .catch(err => console.error("Error:", err));
+  });
+</script>
 </body>
 </html>
