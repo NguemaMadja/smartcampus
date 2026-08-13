@@ -1485,7 +1485,7 @@ app.get('/sensores', async (req, res) => {
     const result = await pool.query(`
       SELECT s.id_sensor,
              ts.nombre AS tipo,
-             a.codigo || ' - ' || a.nombre AS aula,
+             a.codigo || ' - ' || a.nombre AS aula,   -- 👈 concatenamos código y nombre
              s.ubicacion,
              l.valor, l.fecha, l.hora
       FROM sensores s
@@ -1501,20 +1501,13 @@ app.get('/sensores', async (req, res) => {
       ORDER BY s.id_sensor;
     `);
 
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error al obtener sensores');
-  }
-});
-
-
-    // 👇 Aquí imprimes el primer registro en la consola del servidor
+    // 👇 Depuración: imprime el primer registro en la consola del servidor
     console.log(result.rows[0]);
 
+    // 👇 Envía la respuesta al frontend
+    res.json(result.rows);
 
-
-    
+    // 👇 Registrar acción
     await registrarAccion({
       id_usuario: null,
       accion: 'CONSULTAR',
@@ -1526,9 +1519,9 @@ app.get('/sensores', async (req, res) => {
       duracion_segundos: 0
     });
 
-    res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).send('Error al obtener sensores');
   }
 });
 
@@ -1668,6 +1661,7 @@ app.get('/sensores/:id/historial', async (req, res) => {
     res.status(500).json({ error: "Error al obtener historial del sensor" });
   }
 });
+
 
 
 // ---------------- QR Y ASISTENCIA ----------------
