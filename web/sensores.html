@@ -13,6 +13,8 @@
     .btn-rounded { border-radius: 20px; }
     #graficoSensor { height: 400px; }
     .card-header { background-color: rgba(0, 64, 128, 0.85); color: white; }
+    .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 2000; }
+    .table-warning { background-color: #fff3cd !important; }
   </style>
 </head>
 <body>
@@ -44,6 +46,10 @@
     <a href="estadisticas.html" class="btn btn-primary btn-rounded">Ir al Módulo Estadísticas ➡️</a>
   </div>
   <h2>Datos de Sensores</h2>
+
+  <!-- Panel de alertas dinámico -->
+  <div id="alertasEnergia" class="alert alert-warning text-center fw-bold d-none"></div>
+
   <div class="mb-3">
     <button class="btn btn-success btn-rounded" data-bs-toggle="modal" data-bs-target="#modalAgregar">➕ Registrar Sensor</button>
     <button class="btn btn-info btn-rounded" data-bs-toggle="modal" data-bs-target="#modalTipos">⚙️ Gestionar Tipos de Sensores</button>
@@ -67,7 +73,6 @@
     <tbody></tbody>
   </table>
 </div>
-
 <!-- Modal Registrar Sensor -->
 <div class="modal fade" id="modalAgregar" tabindex="-1">
   <div class="modal-dialog"><div class="modal-content">
@@ -138,6 +143,16 @@
   </div></div>
 </div>
 
+<!-- Toast de notificación -->
+<div class="toast-container">
+  <div id="toastAlerta" class="toast align-items-center text-bg-warning border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body">Sala vacía detectada. Apagar luces y aire.</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
 <footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
   TODOS LOS DERECHOS RESERVADOS -UNGE- @ IoT A NUESTRO ALCANCE - 2026
 </footer>
@@ -161,11 +176,17 @@
           <button class="btn btn-warning btn-sm btnEditar" data-id="${row.id_sensor}">✏️</button>
           <button class="btn btn-danger btn-sm btnEliminar" data-id="${row.id_sensor}">🗑️</button>` }
       ],
-      dom: 'Bfrtip', buttons: ['copy','csv','excel','pdf','print']
+      dom: 'Bfrtip', buttons: ['copy','csv','excel','pdf','print'],
+      rowCallback: function(row, data){
+        if(data.tipo.includes("PIR") && data.valor == 0){
+          $(row).addClass('table-warning');
+        }
+      }
     });
 
     const tablaTipos = $('#tablaTipos').DataTable();
     let grafico;
+    let historialSala = [];
 
     // Actualizar tarjetas
     function actualizarTarjetas(data){
@@ -187,39 +208,7 @@
         $('#tarjetasSensores').append(tarjeta);
       });
     }
-
-    // Recargar tarjetas cada vez que DataTables obtenga datos
-    tablaSensores.on('xhr.dt', function(e, settings, json){
-      actualizarTarjetas(json);
-    });
-
-    // Refresco automático cada 20 segundos
-    setInterval(() => tablaSensores.ajax.reload(null, false), 20000);
-
-    // Botón gráfico
-    $('#tablaSensores').on('click', '.btnGrafico', function(){
-      const id = $(this).data('id');
-      fetch(`/sensores/${id}/historial`)
-        .then(res => res.json())
-        .then(historial => {
-          if (grafico) grafico.destroy();
-          grafico = new Chart(document.getElementById('graficoSensor'), {
-            type: 'line',
-            data: {
-              labels: historial.map(h => h.fecha + " " + h.hora),
-              datasets: [{
-                label: 'Valor',
-                data: historial.map(h => h.valor),
-                borderColor: 'rgba(75,192,192,0.8)',
-                fill: false
-              }]
-            }
-          });
-          $('#modalGrafico').modal('show');
-        });
-    });
-
-    // Poblar selects de tipos y aulas
+    // Cargar tipos y aulas
     function cargarTipos(){
       fetch("/tipos_sensores")
         .then(res => res.json())
@@ -313,6 +302,7 @@
         cargarTipos();
       });
     });
+
     // Eliminar tipo de sensor con confirmación
     $('#tablaTipos').on('click', '.btnEliminarTipo', function(){
       const id = $(this).data('id');
