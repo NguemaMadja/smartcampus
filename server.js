@@ -1308,6 +1308,9 @@ app.get('/tipos_sensores', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM tipos_sensores ORDER BY id_tipo');
 
+    // Depuración: imprime el primer registro
+    console.log(result.rows[0]);
+
     await registrarAccion({
       id_usuario: null,
       accion: 'CONSULTAR',
@@ -1350,6 +1353,36 @@ app.post('/tipos_sensores', async (req, res) => {
   }
 });
 
+app.put('/tipos_sensores/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre } = req.body;
+    const result = await pool.query(
+      'UPDATE tipos_sensores SET nombre=$1 WHERE id_tipo=$2 RETURNING *',
+      [nombre, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Tipo de sensor no encontrado' });
+    }
+
+    await registrarAccion({
+      id_usuario: null,
+      accion: 'EDITAR',
+      modulo: 'Tipos de Sensores',
+      detalle: `Tipo de sensor ${id} actualizado a ${nombre}`,
+      dispositivo: 'Web',
+      ip: req.ip,
+      resultado: 'OK',
+      duracion_segundos: 0
+    });
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 app.delete('/tipos_sensores/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1375,6 +1408,7 @@ app.delete('/tipos_sensores/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // ---------------- AULAS CRUD ----------------
 
