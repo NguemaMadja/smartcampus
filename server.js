@@ -53,13 +53,24 @@ async function registrarAccion({ id_usuario, accion, modulo, detalle, dispositiv
 // ---------------- LOGIN ----------------
 app.post('/login', async (req, res) => {
   const { correo, password } = req.body;
+
+  if (!correo || !password) {
+    return res.status(400).json({ error: "Faltan credenciales" });
+  }
+
   try {
     const result = await pool.query("SELECT * FROM usuarios WHERE correo=$1", [correo]);
-    if (result.rows.length === 0) return res.status(401).json({ error: "Usuario no encontrado" });
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: "Usuario no encontrado" });
+    }
 
     const usuario = result.rows[0];
+
+    // Validar contraseña con bcrypt
     const valido = bcrypt.compareSync(password, usuario.password_hash);
-    if (!valido) return res.status(401).json({ error: "Contraseña incorrecta" });
+    if (!valido) {
+      return res.status(401).json({ error: "Contraseña incorrecta" });
+    }
 
     // Registrar acción en actividad y huella
     await registrarAccion({
@@ -72,6 +83,15 @@ app.post('/login', async (req, res) => {
       resultado: 'OK',
       duracion_segundos: 0
     });
+
+    // Respuesta final
+    res.json({ mensaje: "Login correcto", usuario });
+  } catch (err) {
+    console.error("Error en login:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
 
     // Antes devolvías solo los datos básicos del usuario
     res.json({ 
