@@ -67,7 +67,7 @@ app.post('/login', async (req, res) => {
     const usuario = result.rows[0];
 
     // Validar contraseña con bcrypt
-    const valido = bcrypt.compareSync(password, usuario.password_hash);
+    const valido = await bcrypt.compare(password, usuario.password_hash);
     if (!valido) {
       return res.status(401).json({ error: "Contraseña incorrecta" });
     }
@@ -84,29 +84,22 @@ app.post('/login', async (req, res) => {
       duracion_segundos: 0
     });
 
-    // Respuesta final
-    res.json({ mensaje: "Login correcto", usuario });
+    // Respuesta final (solo datos básicos)
+    res.json({
+      mensaje: "Login correcto",
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        nombre: usuario.nombre,
+        correo: usuario.correo,
+        rol: usuario.rol // 👈 ahora también devuelve el rol
+      }
+    });
   } catch (err) {
     console.error("Error en login:", err);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
 
-
-    // Antes devolvías solo los datos básicos del usuario
-    res.json({ 
-      mensaje: "Login correcto", 
-      usuario: {
-        id_usuario: usuario.id_usuario,
-        nombre: usuario.nombre,
-        correo: usuario.correo
-        // 👈 sin rol ni headers especiales
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // === Videoclases ===
 app.get("/videoclases", async (req, res) => {
