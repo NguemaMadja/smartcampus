@@ -1655,256 +1655,6 @@ app.get('/sensores/:id/historial', async (req, res) => {
 
 
 
-// ---------------- QR DE AULAS ----------------
-
-// Generar QR para un aula (vigente por 7 días)
-app.post('/aulas/:id/qr', async (req, res) => {
-  const { id } = req.params;
-  const codigoQR = Math.random().toString(36).substring(2, 10);
-
-  const fechaGeneracion = new Date();
-  const validoHasta = new Date();
-  validoHasta.setDate(fechaGeneracion.getDate() + 7);
-
-  const result = await pool.query(
-    `INSERT INTO qr_aulas (id_aula, codigo_qr, fecha_generacion, valido_hasta)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [id, codigoQR, fechaGeneracion, validoHasta]
-  );
-
-  const qrImage = await QRCode.toDataURL(codigoQR);
-  res.json({ aula: id, codigo_qr: codigoQR, qr_image: qrImage, registro: result.rows[0] });
-});
-
-// Obtener QR vigente de un aula
-app.get('/aulas/:id/qr', async (req, res) => {
-  const { id } = req.params;
-  const hoy = new Date();
-
-  const result = await pool.query(
-    `SELECT codigo_qr FROM qr_aulas
-     WHERE id_aula=$1 AND $2 BETWEEN fecha_generacion AND valido_hasta
-     ORDER BY fecha_generacion DESC LIMIT 1`,
-    [id, hoy]
-  );
-
-  if (!result.rows.length) return res.status(404).json({ error: 'QR no encontrado o vencido' });
-
-  const codigoQR = result.rows[0].codigo_qr;
-  const qrImage = await QRCode.toDataURL(codigoQR);
-  res.json({ aula: id, codigo_qr: codigoQR, qr_image: qrImage });
-});
-
-// ---------------- ASISTENCIA PROFESORES ----------------
-
-// Registrar asistencia profesor usando QR vigente
-app.post('/asistencia', async (req, res) => {
-  const { id_profesor, id_aula, estado, codigo_qr } = req.body;
-  try {
-    const hoy = new Date();
-
-    // Validar QR vigente
-    const result = await pool.query(
-      `SELECT id_qr, codigo_qr, id_asignatura
-       FROM qr_aulas
-       WHERE id_aula = $1 AND $2 BETWEEN fecha_generacion AND valido_hasta
-       ORDER BY fecha_generacion DESC LIMIT 1`,
-      [id_aula, hoy]
-    );
-
-    if (!result.rows.length || result.rows[0].codigo_qr !== codigo_qr) {
-      return res.status(400).json({ error: 'QR inválido o vencido' });
-    }
-
-    const id_qr = result.rows[0].id_qr;
-    const id_asignatura = result.rows[0].id_asignatura;
-
-    await pool.query(
-      `INSERT INTO asistencia (
-         id_profesor, id_departamento, id_carrera, id_asignatura, id_aula,
-         fecha, hora_entrada, validacion, codigo_qr, id_qr
-       )
-       VALUES (
-         $1,
-         (SELECT id_departamento FROM profesores WHERE id_profesor=$1),
-         (SELECT id_carrera FROM profesores WHERE id_profesor=$1),
-         $2,
-         $3,
-         CURRENT_DATE,
-         CURRENT_TIMESTAMP,
-         $4,
-         $5,
-         $6
-       )`,
-      [id_profesor, id_asignatura, id_aula, estado, codigo_qr, id_qr]
-    );
-
-    res.json({ message: 'Asistencia registrada correctamente' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Listar asistencias con filtros
-app.get('/asistencia', async (req, res) => {
-  try {
-    const { departamento, carrera, fecha } = req.query;
-    let filtros = [];
-    let valores = [];
-    let i = 1;
-
-    if (departamento) { filtros.push(`a.id_departamento = $${i++}`); valores.push(departamento); }
-    if (carrera) { filtros.push(`a.id_carrera = $${i++}`); valores.push(carrera); }
-    if (fecha) { filtros.push(`a.fecha = $${i++}`); valores.push(fecha); }
-
-    const where = filtros.length ? `WHERE ${filtros.join(" AND ")}` : "";
-
-    const result = await pool.query(
-      `SELECT a.id_asistencia,
-              u.nombre AS profesor,
-              d.nombre AS departamento,
-              c.nombre AS carrera,
-              asig.nombre AS asignatura,
-              au.nombre AS aula,
-              a.fecha,
-              a.hora_entrada,
-              a.validacion,
-              a.codigo_qr
-       FROM asistencia a
-       JOIN profesores p ON a.id_profesor = p.id_profesor
-       JOIN usuarios u ON p.id_usuario = u.id_usuario
-       JOIN departamentos d ON a.id_departamento = d.id_departamento
-       JOIN carreras c ON a.id_carrera = c.id_carrera
-       JOIN asignaturas asig ON a.id_asignatura = asig.id_asignatura
-       JOIN aulas au ON a.id_aula = au.id_aula
-       ${where}
-       ORDER BY a.fecha DESC, a.hora_entrada DESC`,
-      valores
-    );
-
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Obtener asistencia por ID
-app.get('/asistencia/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query(`SELECT * FROM asistencia WHERE id_asistencia=$1`, [id]);
-    if (!result.rows.length) return res.status(404).json({ error: 'No encontrada' });
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Actualizar asistencia
-app.put('/asistencia/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { profesor, fecha, hora_entrada, validacion } = req.body;
-    await pool.query(
-      `UPDATE asistencia
-       SET fecha=$2, hora_entrada=$3, validacion=$4
-       WHERE id_asistencia=$1`,
-      [id, fecha, hora_entrada, validacion]
-    );
-    res.json({ message: 'Asistencia actualizada' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Eliminar asistencia
-app.delete('/asistencia/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query(`DELETE FROM asistencia WHERE id_asistencia=$1`, [id]);
-    res.json({ message: 'Asistencia eliminada' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ---------------- MÉTRICAS DE ASISTENCIA ----------------
-app.get('/asistencia/metricas', async (req, res) => {
-  try {
-    const hoy = new Date().toISOString().split('T')[0];
-
-    const asistenciasHoy = await pool.query(
-      `SELECT COUNT(*) FROM asistencia WHERE fecha = $1 AND validacion = true`,
-      [hoy]
-    );
-
-    const faltasHoy = await pool.query(
-      `SELECT COUNT(*) FROM asistencia WHERE fecha = $1 AND validacion = false`,
-      [hoy]
-    );
-
-    const totalProfesores = await pool.query(`SELECT COUNT(*) FROM profesores`);
-
-    res.json({
-      asistencias_hoy: parseInt(asistenciasHoy.rows[0].count),
-      faltas: parseInt(faltasHoy.rows[0].count),
-      total_profesores: parseInt(totalProfesores.rows[0].count)
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ---------------- GRÁFICA DE ASISTENCIA ----------------
-app.get('/asistencia/grafica', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT fecha, COUNT(*) AS total
-       FROM asistencia
-       WHERE validacion = true
-       GROUP BY fecha
-       ORDER BY fecha ASC
-       LIMIT 7`
-    );
-
-    res.json({
-      labels: result.rows.map(r => r.fecha),
-      values: result.rows.map(r => parseInt(r.total))
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-
-
-
-
-
-// ---------------- CRON JOB SEMANAL ----------------
-// Generar un nuevo QR semanal para cada aula
-cron.schedule('0 8 * * MON', async () => {
-  try {
-    const aulas = await pool.query('SELECT id_aula FROM aulas');
-    for (const aula of aulas.rows) {
-      const codigoQR = Math.random().toString(36).substring(2, 10);
-      const fechaInicio = new Date();
-      const fechaFin = new Date();
-      fechaFin.setDate(fechaInicio.getDate() + 7);
-
-      await pool.query(
-        `INSERT INTO aula_qr (id_aula, codigo_qr, fecha_inicio, fecha_fin)
-         VALUES ($1, $2, $3, $4)`,
-        [aula.id_aula, codigoQR, fechaInicio, fechaFin]
-      );
-
-      console.log(`Nuevo QR generado para aula ${aula.id_aula}: ${codigoQR}`);
-    }
-  } catch (err) {
-    console.error('Error generando QR semanal:', err);
-  }
-});
 
 
 // ---------------- MÉTRICAS WIFI ----------------
@@ -2231,94 +1981,7 @@ app.post('/api/logsactividad', async (req, res) => {
 
 
 
-// =========================
-// ENDPOINTS DE ASISTENCIA
-// =========================
 
-// 1. Generar QR para un aula
-app.post('/qr/generar', async (req, res) => {
-  try {
-    const { id_aula, id_asignatura, semana } = req.body;
-    const codigo = require('uuid').v4();
-    const validoHasta = new Date();
-    validoHasta.setDate(validoHasta.getDate() + 7); // válido por 1 semana
-
-    const result = await pool.query(`
-      INSERT INTO qr_aulas (id_aula, id_asignatura, semana, codigo_qr, valido_hasta)
-      VALUES ($1, $2, $3, $4, $5) RETURNING *
-    `, [id_aula, id_asignatura, semana, codigo, validoHasta]);
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error generando QR" });
-  }
-});
-
-// 2. Validar QR escaneado
-app.post('/qr/validar', async (req, res) => {
-  try {
-    const { codigo_qr } = req.body;
-    const result = await pool.query(`
-      SELECT * FROM qr_aulas
-      WHERE codigo_qr = $1 AND valido_hasta >= CURRENT_TIMESTAMP
-    `, [codigo_qr]);
-
-    if (result.rows.length === 0) {
-      return res.status(400).json({ error: "QR inválido o caducado" });
-    }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error validando QR" });
-  }
-});
-
-// 3. Registrar asistencia
-app.post('/asistencia', async (req, res) => {
-  try {
-    const { id_profesor, id_departamento, id_carrera, id_asignatura, id_aula, codigo_qr } = req.body;
-
-    // Validar QR primero
-    const qr = await pool.query(`
-      SELECT id_qr FROM qr_aulas
-      WHERE codigo_qr = $1 AND valido_hasta >= CURRENT_TIMESTAMP
-    `, [codigo_qr]);
-
-    if (qr.rows.length === 0) {
-      return res.status(400).json({ error: "QR inválido o caducado" });
-    }
-
-    const id_qr = qr.rows[0].id_qr;
-
-    const result = await pool.query(`
-      INSERT INTO asistencia (
-        id_profesor, id_departamento, id_carrera, id_asignatura, id_aula,
-        fecha, hora_entrada, validacion, codigo_qr, id_qr
-      ) VALUES (
-        $1, $2, $3, $4, $5,
-        CURRENT_DATE, CURRENT_TIMESTAMP, TRUE, $6, $7
-      ) RETURNING *
-    `, [id_profesor, id_departamento, id_carrera, id_asignatura, id_aula, codigo_qr, id_qr]);
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error registrando asistencia" });
-  }
-});
-
-// 4. Listar asistencias
-app.get('/asistencia', async (req, res) => {
-  try {
-    const result = await pool.query(`SELECT * FROM asistencia ORDER BY fecha DESC`);
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error obteniendo asistencias" });
-  }
-});
 
 
 //[-------------ENDPOINTS TRANSPORTE-------------]
@@ -2889,6 +2552,250 @@ app.delete('/videoclases/:id', async (req, res) => {
 });
 
 
+
+// =========================
+// ENDPOINTS DE ASISTENCIA
+// =========================
+
+const QRCode = require('qrcode');
+const { v4: uuidv4 } = require('uuid');
+
+// 1. Generar QR para un aula
+app.post('/qr/generar', async (req, res) => {
+  try {
+    const { id_aula, id_asignatura, semana } = req.body;
+    const codigo = uuidv4();
+    const fechaGeneracion = new Date();
+    const validoHasta = new Date();
+    validoHasta.setDate(fechaGeneracion.getDate() + 7); // válido por 1 semana
+
+    const result = await pool.query(`
+      INSERT INTO qr_aulas (id_aula, id_asignatura, semana, codigo_qr, fecha_generacion, valido_hasta)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+    `, [id_aula, id_asignatura, semana, codigo, fechaGeneracion, validoHasta]);
+
+    const qrImage = await QRCode.toDataURL(codigo);
+
+    res.json({ ...result.rows[0], qr_image: qrImage });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error generando QR" });
+  }
+});
+
+// 2. Validar QR escaneado
+app.post('/qr/validar', async (req, res) => {
+  try {
+    const { codigo_qr } = req.body;
+    const result = await pool.query(`
+      SELECT * FROM qr_aulas
+      WHERE codigo_qr = $1 AND valido_hasta >= CURRENT_TIMESTAMP
+    `, [codigo_qr]);
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: "QR inválido o caducado" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error validando QR" });
+  }
+});
+
+// 3. Registrar asistencia profesor usando QR
+app.post('/asistencia', async (req, res) => {
+  try {
+    const { id_profesor, id_departamento, id_carrera, id_asignatura, id_aula, codigo_qr } = req.body;
+
+    // Validar QR primero
+    const qr = await pool.query(`
+      SELECT id_qr FROM qr_aulas
+      WHERE codigo_qr = $1 AND valido_hasta >= CURRENT_TIMESTAMP
+    `, [codigo_qr]);
+
+    if (qr.rows.length === 0) {
+      return res.status(400).json({ error: "QR inválido o caducado" });
+    }
+
+    const id_qr = qr.rows[0].id_qr;
+
+    const result = await pool.query(`
+      INSERT INTO asistencia (
+        id_profesor, id_departamento, id_carrera, id_asignatura, id_aula,
+        fecha, hora_entrada, validacion, codigo_qr, id_qr
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        CURRENT_DATE, CURRENT_TIMESTAMP, TRUE, $6, $7
+      ) RETURNING *
+    `, [id_profesor, id_departamento, id_carrera, id_asignatura, id_aula, codigo_qr, id_qr]);
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error registrando asistencia" });
+  }
+});
+
+// 4. Listar asistencias con filtros y JOINs
+app.get('/asistencia', async (req, res) => {
+  try {
+    const { departamento, carrera, fecha } = req.query;
+    let filtros = [];
+    let valores = [];
+    let i = 1;
+
+    if (departamento) { filtros.push(`a.id_departamento = $${i++}`); valores.push(departamento); }
+    if (carrera) { filtros.push(`a.id_carrera = $${i++}`); valores.push(carrera); }
+    if (fecha) { filtros.push(`a.fecha = $${i++}`); valores.push(fecha); }
+
+    const where = filtros.length ? `WHERE ${filtros.join(" AND ")}` : "";
+
+    const result = await pool.query(`
+      SELECT a.id_asistencia,
+             u.nombre AS profesor,
+             d.nombre AS departamento,
+             c.nombre AS carrera,
+             asig.nombre AS asignatura,
+             au.nombre AS aula,
+             a.fecha,
+             a.hora_entrada,
+             a.validacion,
+             a.codigo_qr
+      FROM asistencia a
+      JOIN profesores p ON a.id_profesor = p.id_profesor
+      JOIN usuarios u ON p.id_usuario = u.id_usuario
+      JOIN departamentos d ON a.id_departamento = d.id_departamento
+      JOIN carreras c ON a.id_carrera = c.id_carrera
+      JOIN asignaturas asig ON a.id_asignatura = asig.id_asignatura
+      JOIN aulas au ON a.id_aula = au.id_aula
+      ${where}
+      ORDER BY a.fecha DESC, a.hora_entrada DESC
+    `, valores);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error obteniendo asistencias" });
+  }
+});
+
+// 5. Obtener asistencia por ID
+app.get('/asistencia/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(`SELECT * FROM asistencia WHERE id_asistencia=$1`, [id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'No encontrada' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. Actualizar asistencia
+app.put('/asistencia/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fecha, hora_entrada, validacion } = req.body;
+    await pool.query(
+      `UPDATE asistencia
+       SET fecha=$2, hora_entrada=$3, validacion=$4
+       WHERE id_asistencia=$1`,
+      [id, fecha, hora_entrada, validacion]
+    );
+    res.json({ message: 'Asistencia actualizada' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 7. Eliminar asistencia
+app.delete('/asistencia/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query(`DELETE FROM asistencia WHERE id_asistencia=$1`, [id]);
+    res.json({ message: 'Asistencia eliminada' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 8. Métricas de asistencia
+app.get('/asistencia/metricas', async (req, res) => {
+  try {
+    const hoy = new Date().toISOString().split('T')[0];
+
+    const asistenciasHoy = await pool.query(
+      `SELECT COUNT(*) FROM asistencia WHERE fecha = $1 AND validacion = true`,
+      [hoy]
+    );
+
+    const faltasHoy = await pool.query(
+      `SELECT COUNT(*) FROM asistencia WHERE fecha = $1 AND validacion = false`,
+      [hoy]
+    );
+
+    const totalProfesores = await pool.query(`SELECT COUNT(*) FROM profesores`);
+
+    res.json({
+      asistencias_hoy: parseInt(asistenciasHoy.rows[0].count),
+      faltas: parseInt(faltasHoy.rows[0].count),
+      total_profesores: parseInt(totalProfesores.rows[0].count)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 9. Gráfica de asistencia
+app.get('/asistencia/grafica', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT fecha, COUNT(*) AS total
+       FROM asistencia
+       WHERE validacion = true
+       GROUP BY fecha
+       ORDER BY fecha ASC
+       LIMIT 7`
+    );
+
+    res.json({
+      labels: result.rows.map(r => r.fecha),
+      values: result.rows.map(r => parseInt(r.total))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+// =========================
+// CRON JOB SEMANAL DE QR
+// =========================
+
+// Generar un nuevo QR semanal para cada aula
+cron.schedule('0 8 * * MON', async () => {
+  try {
+    const aulas = await pool.query('SELECT id_aula FROM aulas');
+    for (const aula of aulas.rows) {
+      const codigoQR = require('uuid').v4();
+      const fechaGeneracion = new Date();
+      const validoHasta = new Date();
+      validoHasta.setDate(fechaGeneracion.getDate() + 7);
+
+      await pool.query(
+        `INSERT INTO qr_aulas (id_aula, codigo_qr, fecha_generacion, valido_hasta)
+         VALUES ($1, $2, $3, $4)`,
+        [aula.id_aula, codigoQR, fechaGeneracion, validoHasta]
+      );
+
+      console.log(`✅ Nuevo QR generado para aula ${aula.id_aula}: ${codigoQR}`);
+    }
+  } catch (err) {
+    console.error('❌ Error generando QR semanal:', err);
+  }
+});
 
 
 
