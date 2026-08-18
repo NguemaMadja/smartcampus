@@ -2560,6 +2560,27 @@ app.delete('/videoclases/:id', async (req, res) => {
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
 
+// 0. Endpoints de Departamentos y Carreras
+app.get('/departamentos', async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT id_departamento, nombre FROM departamentos ORDER BY nombre ASC`);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error obteniendo departamentos" });
+  }
+});
+
+app.get('/carreras', async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT id_carrera, nombre FROM carreras ORDER BY nombre ASC`);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error obteniendo carreras" });
+  }
+});
+
 // 1. Generar QR para un aula
 app.post('/qr/generar', async (req, res) => {
   try {
@@ -2636,7 +2657,6 @@ app.post('/asistencia', async (req, res) => {
     res.status(500).json({ error: "Error registrando asistencia" });
   }
 });
-
 // 4. Listar asistencias con filtros y JOINs
 app.get('/asistencia', async (req, res) => {
   try {
@@ -2737,9 +2757,16 @@ app.get('/asistencia/metricas', async (req, res) => {
 
     const totalProfesores = await pool.query(`SELECT COUNT(*) FROM profesores`);
 
+    // Ejemplo de tardanzas: entrada después de las 08:15
+    const tardanzasHoy = await pool.query(
+      `SELECT COUNT(*) FROM asistencia WHERE fecha = $1 AND hora_entrada > '08:15'`,
+      [hoy]
+    );
+
     res.json({
       asistencias_hoy: parseInt(asistenciasHoy.rows[0].count),
       faltas: parseInt(faltasHoy.rows[0].count),
+      tardanzas: parseInt(tardanzasHoy.rows[0].count),
       total_profesores: parseInt(totalProfesores.rows[0].count)
     });
   } catch (err) {
@@ -2767,6 +2794,7 @@ app.get('/asistencia/grafica', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 
