@@ -147,47 +147,45 @@
       <canvas id="graficaAsistencia"></canvas>
     </div>
   </div>
-
-  <!-- Modal Editar Asistencia -->
-  <div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+  <!-- Modal de edición -->
+  <div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Editar Asistencia</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-header bg-warning">
+          <h5 class="modal-title" id="modalEditarLabel">Editar Asistencia</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
         <div class="modal-body">
           <form id="formEditar">
+            <input type="hidden" id="editIdAsistencia">
+            <div class="mb-3">
+              <label class="form-label">Profesor</label>
+              <input type="text" class="form-control" id="editProfesor">
+            </div>
             <div class="mb-3">
               <label class="form-label">Fecha</label>
               <input type="date" class="form-control" id="editFecha">
             </div>
             <div class="mb-3">
-              <label class="form-label">Hora Entrada</label>
-              <input type="time" class="form-control" id="editHora">
+              <label class="form-label">Hora de entrada</label>
+              <input type="time" class="form-control" id="editHoraEntrada">
             </div>
             <div class="mb-3">
               <label class="form-label">Validación</label>
               <select class="form-select" id="editValidacion">
-                <option value="true">Sí</option>
-                <option value="false">No</option>
+                <option value="true">✔️ Sí</option>
+                <option value="false">❌ No</option>
               </select>
             </div>
           </form>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-primary" onclick="guardarEdicion()">Guardar</button>
+          <button type="button" class="btn btn-primary" id="btnGuardarCambios">Guardar cambios</button>
         </div>
       </div>
     </div>
   </div>
-</div>
-
-  <!-- Pie de página -->
-  <footer class="bg-dark text-white text-center py-3 mt-4">
-    TODOS LOS DERECHOS RESERVADOS - UNGE © IoT A NUESTRO ALCANCE - 2026
-  </footer>
   <!-- Scripts -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -230,7 +228,7 @@
               data: null,
               orderable: false,
               render: () => `
-                <button class="btn btn-sm btn-warning me-1" data-bs-toggle="modal" data-bs-target="#modalEditar"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-warning me-1"><i class="fas fa-edit"></i></button>
                 <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
               `
             }
@@ -314,16 +312,44 @@
       }
     }
 
-    // 🔹 Guardar edición desde el modal
-    async function guardarEdicion() {
-      const fecha = document.getElementById("editFecha").value;
-      const hora = document.getElementById("editHora").value;
-      const validacion = document.getElementById("editValidacion").value;
+    // 🔹 Evento para abrir modal de edición
+    $('#tablaAsistencia').on('click', '.btn-warning', function () {
+      const data = tabla.row($(this).parents('tr')).data();
+      if (data) {
+        $('#editIdAsistencia').val(data.id_asistencia);
+        $('#editProfesor').val(data.profesor);
+        $('#editFecha').val(data.fecha);
+        $('#editHoraEntrada').val(data.hora_entrada);
+        $('#editValidacion').val(data.validacion ? "true" : "false");
+        $('#modalEditar').modal('show');
+      }
+    });
 
-      // Aquí deberías enviar el update al backend
-      console.log("Guardando edición:", { fecha, hora, validacion });
-      alert("Edición guardada (ejemplo).");
-    }
+    // 🔹 Guardar cambios desde el modal
+    document.getElementById("btnGuardarCambios").addEventListener("click", function() {
+      const id = document.getElementById("editIdAsistencia").value;
+      const payload = {
+        profesor: document.getElementById("editProfesor").value,
+        fecha: document.getElementById("editFecha").value,
+        hora_entrada: document.getElementById("editHoraEntrada").value,
+        validacion: document.getElementById("editValidacion").value === "true"
+      };
+
+      fetch("https://smarcampus.onrender.com/asistencia/" + id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      .then(res => {
+        if (res.ok) {
+          tabla.ajax.reload();
+          $('#modalEditar').modal('hide');
+        } else {
+          alert("Error al actualizar asistencia");
+        }
+      })
+      .catch(err => console.error("Error:", err));
+    });
 
     // 🔹 Botón de filtros
     document.getElementById("formFiltros").addEventListener("submit", function(e) {
