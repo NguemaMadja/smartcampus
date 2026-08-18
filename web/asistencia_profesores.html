@@ -12,7 +12,7 @@
 </head>
 <body>
 
-<!-- Navbar persistente -->
+<!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: rgba(0, 64, 128, 0.85);">
   <div class="container-fluid">
     <a class="navbar-brand fw-bold" href="admin.html">SmartCampusGuide</a>
@@ -21,7 +21,6 @@
     </button>
     <div class="collapse navbar-collapse" id="menuPrincipal">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link" href="admin.html">Admin</a></li>
         <li class="nav-item"><a class="nav-link" href="usuarios.html">Usuarios</a></li>
         <li class="nav-item"><a class="nav-link" href="profesores.html">Profesores</a></li>
         <li class="nav-item"><a class="nav-link active" href="asistencia_profesores.html">Asistencia Profesores</a></li>
@@ -57,6 +56,49 @@
         </tr>
       </thead>
     </table>
+  </div>
+  <!-- Métricas rápidas -->
+  <div class="row text-center my-4">
+    <div class="col-md-3">
+      <div class="card bg-success text-white">
+        <div class="card-body">
+          <h5>Asistencias Hoy</h5>
+          <p class="fs-4" id="metricAsistencias">0</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-danger text-white">
+        <div class="card-body">
+          <h5>Faltas</h5>
+          <p class="fs-4" id="metricFaltas">0</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning text-dark">
+        <div class="card-body">
+          <h5>Tardanzas</h5>
+          <p class="fs-4" id="metricTardanzas">0</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-info text-dark">
+        <div class="card-body">
+          <h5>Total Profesores</h5>
+          <p class="fs-4" id="metricTotal">0</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráfica -->
+  <div class="card mb-4">
+    <div class="card-header">Gráfica de Asistencias</div>
+    <div class="card-body">
+      <canvas id="graficaAsistencia"></canvas>
+    </div>
   </div>
   <!-- Modal de edición -->
   <div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
@@ -117,14 +159,15 @@
       </div>
     </div>
   </div>
-<footer class="text-center mt-4 p-3" style="background-color: rgba(0, 64, 128, 0.85); color: white;">
-  TODOS LOS DERECHOS RESERVADOS -UNGE- @ IoT A NUESTRO ALCANCE - 2026
+<footer class="bg-dark text-white text-center py-3 mt-4">
+  TODOS LOS DERECHOS RESERVADOS - UNGE © IoT A NUESTRO ALCANCE - 2026
 </footer>
 
-<!-- jQuery, Bootstrap, DataTables -->
+<!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
   let tabla;
@@ -165,6 +208,34 @@
         ]
       });
     }
+  }
+
+  // 🔹 Cargar métricas
+  async function cargarMetricas() {
+    const res = await fetch("/asistencia/metricas");
+    const data = await res.json();
+    document.getElementById("metricAsistencias").textContent = data.asistencias_hoy;
+    document.getElementById("metricFaltas").textContent = data.faltas;
+    document.getElementById("metricTardanzas").textContent = data.tardanzas;
+    document.getElementById("metricTotal").textContent = data.total_profesores;
+  }
+
+  // 🔹 Cargar gráfica
+  async function cargarGrafica() {
+    const res = await fetch("/asistencia/grafica");
+    const data = await res.json();
+    new Chart(document.getElementById("graficaAsistencia"), {
+      type: 'line',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: 'Asistencias',
+          data: data.values,
+          borderColor: 'blue',
+          fill: false
+        }]
+      }
+    });
   }
 
   // 🔹 Abrir modal edición
@@ -235,6 +306,8 @@
   // 🔹 Inicializar al cargar la página
   $(document).ready(function() {
     cargarAsistencia();
+    cargarMetricas();
+    cargarGrafica();
   });
 </script>
 </body>
