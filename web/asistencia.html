@@ -39,7 +39,6 @@
       </div>
     </div>
   </nav>
-
 <div class="container mt-4">
   <h2 class="mb-4">Asistencia de Profesores</h2>
 
@@ -67,6 +66,7 @@
       </button>
     </div>
   </form>
+
   <!-- Botón para generar QR -->
   <div class="row mb-4">
     <div class="col-md-12 text-end">
@@ -76,7 +76,7 @@
     </div>
   </div>
 
-  <!-- Contenedor para mostrar el QR generado -->
+  <!-- Contenedor QR -->
   <div class="row mb-4">
     <div class="col-md-12 text-center">
       <img id="qrAula" src="" alt="QR Aula" style="max-width:250px; display:none;">
@@ -93,7 +93,7 @@
         </div>
       </div>
     </div>
-    <div class="col-md-3" id="cardFaltas">
+    <div class="col-md-3">
       <div class="card bg-danger text-white">
         <div class="card-body">
           <h5>Faltas</h5>
@@ -119,7 +119,7 @@
     </div>
   </div>
 
-  <!-- Tabla dinámica con DataTables -->
+  <!-- Tabla dinámica -->
   <div class="table-responsive">
     <table id="tablaAsistencia" class="table table-hover table-bordered nowrap" style="width:100%">
       <thead class="table-dark">
@@ -139,21 +139,21 @@
       </thead>
     </table>
   </div>
-
-  <!-- Gráficas -->
+  <!-- Gráfica -->
   <div class="card mb-4">
     <div class="card-header">Gráfica de Asistencias</div>
     <div class="card-body">
       <canvas id="graficaAsistencia"></canvas>
     </div>
   </div>
-  <!-- Modal de edición -->
-  <div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
+
+  <!-- Modal edición -->
+  <div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header bg-warning">
-          <h5 class="modal-title" id="modalEditarLabel">Editar Asistencia</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          <h5 class="modal-title">Editar Asistencia</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <form id="formEditar">
@@ -187,13 +187,13 @@
     </div>
   </div>
 
-  <!-- Modal de eliminación -->
-  <div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+  <!-- Modal eliminación -->
+  <div class="modal fade" id="modalEliminar" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header bg-danger text-white">
-          <h5 class="modal-title" id="modalEliminarLabel">Eliminar Asistencia</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          <h5 class="modal-title">Eliminar Asistencia</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <p>¿Estás seguro de que deseas eliminar esta asistencia?</p>
@@ -212,207 +212,206 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
- <script>
-  let tabla;
+  <script>
+    let tabla;
 
-  // 🔹 Inicializar tabla de asistencia
-  function cargarAsistencia(params = {}) {
-    if (tabla) {
-      tabla.ajax.url("/asistencia?" + new URLSearchParams(params)).load();
-    } else {
-      tabla = $('#tablaAsistencia').DataTable({
-        ajax: {
-          url: "/asistencia",
-          dataSrc: ""
-        },
-        scrollX: true,
-        responsive: false,
-        autoWidth: false,
-        columns: [
-          { data: 'id_asistencia' },
-          { data: 'profesor' },
-          { data: 'departamento' },
-          { data: 'carrera' },
-          { data: 'asignatura' },
-          { data: 'aula' },
-          { data: 'fecha' },
-          { data: 'hora_entrada' },
-          {
-            data: 'validacion',
-            render: val => val 
-              ? '<span class="badge bg-success">✔️ Sí</span>' 
-              : '<span class="badge bg-danger">❌ No</span>'
-          },
-          { data: 'codigo_qr' },
-          {
-            data: null,
-            orderable: false,
-            render: () => `
-              <button class="btn btn-sm btn-warning me-1"><i class="fas fa-edit"></i></button>
-              <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-            `
-          }
-        ]
-      });
-    }
-  }
-
-  // 🔹 Cargar métricas
-  async function cargarMetricas() {
-    const res = await fetch("/asistencia/metricas");
-    const data = await res.json();
-    document.getElementById("metricAsistencias").textContent = data.asistencias_hoy;
-    document.getElementById("metricFaltas").textContent = data.faltas;
-    document.getElementById("metricTardanzas").textContent = data.tardanzas;
-    document.getElementById("metricTotal").textContent = data.total_profesores;
-  }
-
-  // 🔹 Cargar gráfica
-  async function cargarGrafica() {
-    const res = await fetch("/asistencia/grafica");
-    const data = await res.json();
-    new Chart(document.getElementById("graficaAsistencia"), {
-      type: 'line',
-      data: {
-        labels: data.labels,
-        datasets: [{
-          label: 'Asistencias',
-          data: data.values,
-          borderColor: 'blue',
-          fill: false
-        }]
+    // 🔹 Inicializar tabla de asistencia
+    function cargarAsistencia(params = {}) {
+      if (tabla) {
+        tabla.ajax.url("/asistencia?" + new URLSearchParams(params)).load();
+      } else {
+        tabla = $('#tablaAsistencia').DataTable({
+          ajax: { url: "/asistencia", dataSrc: "" },
+          scrollX: true,
+          responsive: false,
+          autoWidth: false,
+          columns: [
+            { data: 'id_asistencia' },
+            { data: 'profesor' },
+            { data: 'departamento' },
+            { data: 'carrera' },
+            { data: 'asignatura' },
+            { data: 'aula' },
+            { data: 'fecha' },
+            { data: 'hora_entrada' },
+            {
+              data: 'validacion',
+              render: val => val 
+                ? '<span class="badge bg-success">✔️ Sí</span>' 
+                : '<span class="badge bg-danger">❌ No</span>'
+            },
+            { data: 'codigo_qr' },
+            {
+              data: null,
+              orderable: false,
+              render: () => `
+                <button class="btn btn-sm btn-warning me-1"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+              `
+            }
+          ]
+        });
       }
-    });
-  }
+    }
 
-  // 🔹 Cargar departamentos
-  async function cargarDepartamentos() {
-    const res = await fetch("/departamentos");
-    const data = await res.json();
-    const select = document.getElementById("filtroDepartamento");
-    data.forEach(d => {
-      const opt = document.createElement("option");
-      opt.value = d.id_departamento;
-      opt.textContent = d.nombre;
-      select.appendChild(opt);
-    });
-  }
-
-  // 🔹 Cargar carreras
-  async function cargarCarreras() {
-    const res = await fetch("/carreras");
-    const data = await res.json();
-    const select = document.getElementById("filtroCarrera");
-    data.forEach(c => {
-      const opt = document.createElement("option");
-      opt.value = c.id_carrera;
-      opt.textContent = c.nombre;
-      select.appendChild(opt);
-    });
-  }
-
-  // 🔹 Generar QR manualmente
-  async function generarQR() {
-    try {
-      const res = await fetch("/qr/generar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id_aula: 1, id_asignatura: 2, semana: 34 })
-      });
+    // 🔹 Cargar métricas
+    async function cargarMetricas() {
+      const res = await fetch("/asistencia/metricas");
       const data = await res.json();
-      if (data.qr_image) {
-        document.getElementById("qrAula").src = data.qr_image;
-        document.getElementById("qrAula").style.display = "block";
-      } else {
-        alert("No se pudo generar el QR");
-      }
-    } catch (err) {
-      console.error("Error generando QR:", err);
-      alert("Error generando QR");
+      document.getElementById("metricAsistencias").textContent = data.asistencias_hoy;
+      document.getElementById("metricFaltas").textContent = data.faltas;
+      document.getElementById("metricTardanzas").textContent = data.tardanzas;
+      document.getElementById("metricTotal").textContent = data.total_profesores;
     }
-  }
 
-  // 🔹 Eventos de edición y eliminación
-  $('#tablaAsistencia').on('click', '.btn-warning', function () {
-    const data = tabla.row($(this).parents('tr')).data();
-    if (data) {
-      $('#editIdAsistencia').val(data.id_asistencia);
-      $('#editProfesor').val(data.profesor);
-      $('#editFecha').val(data.fecha);
-      $('#editHoraEntrada').val(data.hora_entrada);
-      $('#editValidacion').val(data.validacion ? "true" : "false");
-      $('#modalEditar').modal('show');
+    // 🔹 Cargar gráfica
+    async function cargarGrafica() {
+      const res = await fetch("/asistencia/grafica");
+      const data = await res.json();
+      new Chart(document.getElementById("graficaAsistencia"), {
+        type: 'line',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: 'Asistencias',
+            data: data.values,
+            borderColor: 'blue',
+            fill: false
+          }]
+        }
+      });
     }
-  });
 
-  document.getElementById("btnGuardarCambios").addEventListener("click", function() {
-    const id = document.getElementById("editIdAsistencia").value;
-    const payload = {
-      profesor: document.getElementById("editProfesor").value,
-      fecha: document.getElementById("editFecha").value,
-      hora_entrada: document.getElementById("editHoraEntrada").value,
-      validacion: document.getElementById("editValidacion").value === "true"
-    };
-
-    fetch("/asistencia/" + id, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    })
-    .then(res => {
-      if (res.ok) {
-        tabla.ajax.reload();
-        $('#modalEditar').modal('hide');
-      } else {
-        alert("Error al actualizar asistencia");
-      }
-    })
-    .catch(err => console.error("Error:", err));
-  });
-
-  $('#tablaAsistencia').on('click', '.btn-danger', function () {
-    const data = tabla.row($(this).parents('tr')).data();
-    if (data) {
-      $('#deleteIdAsistencia').val(data.id_asistencia);
-      $('#modalEliminar').modal('show');
+    // 🔹 Cargar departamentos
+    async function cargarDepartamentos() {
+      const res = await fetch("/departamentos");
+      const data = await res.json();
+      const select = document.getElementById("filtroDepartamento");
+      data.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d.id_departamento;
+        opt.textContent = d.nombre;
+        select.appendChild(opt);
+      });
     }
-  });
 
-  document.getElementById("btnConfirmarEliminar").addEventListener("click", function() {
-    const id = document.getElementById("deleteIdAsistencia").value;
-    fetch("/asistencia/" + id, {
-      method: "DELETE"
-    })
-    .then(res => {
-      if (res.ok) {
-        tabla.ajax.reload();
-        $('#modalEliminar').modal('hide');
-      } else {
-        alert("Error al eliminar asistencia");
+    // 🔹 Cargar carreras
+    async function cargarCarreras() {
+      const res = await fetch("/carreras");
+      const data = await res.json();
+      const select = document.getElementById("filtroCarrera");
+      data.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id_carrera;
+        opt.textContent = c.nombre;
+        select.appendChild(opt);
+      });
+    }
+
+    // 🔹 Generar QR manualmente
+    async function generarQR() {
+      try {
+        const res = await fetch("/qr/generar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id_aula: 1, id_asignatura: 2, semana: 34 })
+        });
+        const data = await res.json();
+        if (data.qr_image) {
+          document.getElementById("qrAula").src = data.qr_image;
+          document.getElementById("qrAula").style.display = "block";
+        } else {
+          alert("No se pudo generar el QR");
+        }
+      } catch (err) {
+        console.error("Error generando QR:", err);
+        alert("Error generando QR");
       }
-    })
-    .catch(err => console.error("Error:", err));
-  });
+    }
 
-  // 🔹 Botón de filtros
-  document.getElementById("formFiltros").addEventListener("submit", function(e) {
-    e.preventDefault();
-    const params = {
-      departamento: document.getElementById("filtroDepartamento").value,
-      carrera: document.getElementById("filtroCarrera").value,
-      fecha: document.getElementById("filtroFecha").value
-    };
-    cargarAsistencia(params);
-    cargarMetricas();
-    cargarGrafica();
-  });
+    // 🔹 Eventos de edición y eliminación
+    $('#tablaAsistencia').on('click', '.btn-warning', function () {
+      const data = tabla.row($(this).parents('tr')).data();
+      if (data) {
+        $('#editIdAsistencia').val(data.id_asistencia);
+        $('#editProfesor').val(data.profesor);
+        $('#editFecha').val(data.fecha);
+        $('#editHoraEntrada').val(data.hora_entrada);
+        $('#editValidacion').val(data.validacion ? "true" : "false");
+        $('#modalEditar').modal('show');
+      }
+    });
 
-  // 🔹 Inicialización al cargar la página
-  cargarDepartamentos();
-  cargarCarreras();
-  cargarAsistencia();
-  cargarMetricas();
-  cargarGrafica();
-</script>
+    document.getElementById("btnGuardarCambios").addEventListener("click", function() {
+      const id = document.getElementById("editIdAsistencia").value;
+      const payload = {
+        profesor: document.getElementById("editProfesor").value,
+        fecha: document.getElementById("editFecha").value,
+        hora_entrada: document.getElementById("editHoraEntrada").value,
+        validacion: document.getElementById("editValidacion").value === "true"
+      };
+
+      fetch("/asistencia/" + id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      .then(res => {
+        if (res.ok) {
+          tabla.ajax.reload();
+          $('#modalEditar').modal('hide');
+        } else {
+          alert("Error al actualizar asistencia");
+        }
+      })
+      .catch(err => console.error("Error:", err));
+    });
+
+    $('#tablaAsistencia').on('click', '.btn-danger', function () {
+      const data = tabla.row($(this).parents('tr')).data();
+      if (data) {
+        $('#deleteIdAsistencia').val(data.id_asistencia);
+        $('#modalEliminar').modal('show');
+      }
+    });
+
+    document.getElementById("btnConfirmarEliminar").addEventListener("click", function() {
+      const id = document.getElementById("deleteIdAsistencia").value;
+      fetch("/asistencia/" + id, {
+        method: "DELETE"
+      })
+      .then(res => {
+        if (res.ok) {
+          tabla.ajax.reload();
+          $('#modalEliminar').modal('hide');
+        } else {
+          alert("Error al eliminar asistencia");
+        }
+      })
+      .catch(err => console.error("Error:", err));
+    });
+
+    // 🔹 Botón de filtros
+    document.getElementById("formFiltros").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const params = {
+        departamento: document.getElementById("filtroDepartamento").value,
+        carrera: document.getElementById("filtroCarrera").value,
+        fecha: document.getElementById("filtroFecha").value
+      };
+      cargarAsistencia(params);
+      cargarMetricas();
+      cargarGrafica();
+    });
+
+    // 🔹 Inicialización segura al cargar la página
+    $(document).ready(function() {
+      cargarDepartamentos();
+      cargarCarreras();
+      cargarAsistencia();
+      cargarMetricas();
+      cargarGrafica();
+    });
+  </script>
 </body>
 </html>
