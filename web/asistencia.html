@@ -212,210 +212,207 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-  <script>
-    let tabla;
+ <script>
+  let tabla;
 
-    // 🔹 Inicializar tabla de asistencia
-    function cargarAsistencia(params = {}) {
-      if (tabla) {
-        tabla.ajax.url("https://smarcampus.onrender.com/asistencia?" + new URLSearchParams(params)).load();
-      } else {
-        tabla = $('#tablaAsistencia').DataTable({
-          ajax: {
-            url: "https://smarcampus.onrender.com/asistencia",
-            dataSrc: ""
+  // 🔹 Inicializar tabla de asistencia
+  function cargarAsistencia(params = {}) {
+    if (tabla) {
+      tabla.ajax.url("/asistencia?" + new URLSearchParams(params)).load();
+    } else {
+      tabla = $('#tablaAsistencia').DataTable({
+        ajax: {
+          url: "/asistencia",
+          dataSrc: ""
+        },
+        scrollX: true,
+        responsive: false,
+        autoWidth: false,
+        columns: [
+          { data: 'id_asistencia' },
+          { data: 'profesor' },
+          { data: 'departamento' },
+          { data: 'carrera' },
+          { data: 'asignatura' },
+          { data: 'aula' },
+          { data: 'fecha' },
+          { data: 'hora_entrada' },
+          {
+            data: 'validacion',
+            render: val => val 
+              ? '<span class="badge bg-success">✔️ Sí</span>' 
+              : '<span class="badge bg-danger">❌ No</span>'
           },
-          scrollX: true,
-          responsive: false,
-          autoWidth: false,
-          columns: [
-            { data: 'id_asistencia' },
-            { data: 'profesor' },
-            { data: 'departamento' },
-            { data: 'carrera' },
-            { data: 'asignatura' },
-            { data: 'aula' },
-            { data: 'fecha' },
-            { data: 'hora_entrada' },
-            {
-              data: 'validacion',
-              render: val => val 
-                ? '<span class="badge bg-success">✔️ Sí</span>' 
-                : '<span class="badge bg-danger">❌ No</span>'
-            },
-            { data: 'codigo_qr' },
-            {
-              data: null,
-              orderable: false,
-              render: () => `
-                <button class="btn btn-sm btn-warning me-1"><i class="fas fa-edit"></i></button>
-                <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-              `
-            }
-          ]
-        });
-      }
-    }
-
-    // 🔹 Cargar métricas
-    async function cargarMetricas() {
-      const res = await fetch("https://smarcampus.onrender.com/asistencia/metricas");
-      const data = await res.json();
-      document.getElementById("metricAsistencias").textContent = data.asistencias_hoy;
-      document.getElementById("metricFaltas").textContent = data.faltas;
-      document.getElementById("metricTardanzas").textContent = data.tardanzas;
-      document.getElementById("metricTotal").textContent = data.total_profesores;
-    }
-
-    // 🔹 Cargar gráfica
-    async function cargarGrafica() {
-      const res = await fetch("https://smarcampus.onrender.com/asistencia/grafica");
-      const data = await res.json();
-      new Chart(document.getElementById("graficaAsistencia"), {
-        type: 'line',
-        data: {
-          labels: data.labels,
-          datasets: [{
-            label: 'Asistencias',
-            data: data.values,
-            borderColor: 'blue',
-            fill: false
-          }]
-        }
+          { data: 'codigo_qr' },
+          {
+            data: null,
+            orderable: false,
+            render: () => `
+              <button class="btn btn-sm btn-warning me-1"><i class="fas fa-edit"></i></button>
+              <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+            `
+          }
+        ]
       });
     }
+  }
 
-    // 🔹 Cargar departamentos
-    async function cargarDepartamentos() {
-      const res = await fetch("https://smarcampus.onrender.com/departamentos");
-      const data = await res.json();
-      const select = document.getElementById("filtroDepartamento");
-      data.forEach(d => {
-        const opt = document.createElement("option");
-        opt.value = d.id_departamento;
-        opt.textContent = d.nombre;
-        select.appendChild(opt);
-      });
-    }
+  // 🔹 Cargar métricas
+  async function cargarMetricas() {
+    const res = await fetch("/asistencia/metricas");
+    const data = await res.json();
+    document.getElementById("metricAsistencias").textContent = data.asistencias_hoy;
+    document.getElementById("metricFaltas").textContent = data.faltas;
+    document.getElementById("metricTardanzas").textContent = data.tardanzas;
+    document.getElementById("metricTotal").textContent = data.total_profesores;
+  }
 
-    // 🔹 Cargar carreras
-    async function cargarCarreras() {
-      const res = await fetch("https://smarcampus.onrender.com/carreras");
-      const data = await res.json();
-      const select = document.getElementById("filtroCarrera");
-      data.forEach(c => {
-        const opt = document.createElement("option");
-        opt.value = c.id_carrera;
-        opt.textContent = c.nombre;
-        select.appendChild(opt);
-      });
-    }
-
-    // 🔹 Generar QR manualmente
-    async function generarQR() {
-      try {
-        const res = await fetch("https://smarcampus.onrender.com/qr/generar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id_aula: 1, id_asignatura: 2, semana: 34 })
-        });
-        const data = await res.json();
-        if (data.qr_image) {
-          document.getElementById("qrAula").src = data.qr_image;
-          document.getElementById("qrAula").style.display = "block";
-        } else {
-          alert("No se pudo generar el QR");
-        }
-      } catch (err) {
-        console.error("Error generando QR:", err);
-        alert("Error generando QR");
-      }
-    }
-
-    // 🔹 Evento para abrir modal de edición
-    $('#tablaAsistencia').on('click', '.btn-warning', function () {
-      const data = tabla.row($(this).parents('tr')).data();
-      if (data) {
-        $('#editIdAsistencia').val(data.id_asistencia);
-        $('#editProfesor').val(data.profesor);
-        $('#editFecha').val(data.fecha);
-        $('#editHoraEntrada').val(data.hora_entrada);
-        $('#editValidacion').val(data.validacion ? "true" : "false");
-        $('#modalEditar').modal('show');
+  // 🔹 Cargar gráfica
+  async function cargarGrafica() {
+    const res = await fetch("/asistencia/grafica");
+    const data = await res.json();
+    new Chart(document.getElementById("graficaAsistencia"), {
+      type: 'line',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: 'Asistencias',
+          data: data.values,
+          borderColor: 'blue',
+          fill: false
+        }]
       }
     });
+  }
 
-    // 🔹 Guardar cambios desde el modal
-    document.getElementById("btnGuardarCambios").addEventListener("click", function() {
-      const id = document.getElementById("editIdAsistencia").value;
-      const payload = {
-        profesor: document.getElementById("editProfesor").value,
-        fecha: document.getElementById("editFecha").value,
-        hora_entrada: document.getElementById("editHoraEntrada").value,
-        validacion: document.getElementById("editValidacion").value === "true"
-      };
+  // 🔹 Cargar departamentos
+  async function cargarDepartamentos() {
+    const res = await fetch("/departamentos");
+    const data = await res.json();
+    const select = document.getElementById("filtroDepartamento");
+    data.forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d.id_departamento;
+      opt.textContent = d.nombre;
+      select.appendChild(opt);
+    });
+  }
 
-      fetch("https://smarcampus.onrender.com/asistencia/" + id, {
-        method: "PUT",
+  // 🔹 Cargar carreras
+  async function cargarCarreras() {
+    const res = await fetch("/carreras");
+    const data = await res.json();
+    const select = document.getElementById("filtroCarrera");
+    data.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id_carrera;
+      opt.textContent = c.nombre;
+      select.appendChild(opt);
+    });
+  }
+
+  // 🔹 Generar QR manualmente
+  async function generarQR() {
+    try {
+      const res = await fetch("/qr/generar", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      })
-      .then(res => {
-        if (res.ok) {
-          tabla.ajax.reload();
-          $('#modalEditar').modal('hide');
-        } else {
-          alert("Error al actualizar asistencia");
-        }
-      })
-      .catch(err => console.error("Error:", err));
-    });
-
-    // 🔹 Evento para abrir modal de eliminación
-    $('#tablaAsistencia').on('click', '.btn-danger', function () {
-      const data = tabla.row($(this).parents('tr')).data();
-      if (data) {
-        $('#deleteIdAsistencia').val(data.id_asistencia);
-        $('#modalEliminar').modal('show');
+        body: JSON.stringify({ id_aula: 1, id_asignatura: 2, semana: 34 })
+      });
+      const data = await res.json();
+      if (data.qr_image) {
+        document.getElementById("qrAula").src = data.qr_image;
+        document.getElementById("qrAula").style.display = "block";
+      } else {
+        alert("No se pudo generar el QR");
       }
-    });
+    } catch (err) {
+      console.error("Error generando QR:", err);
+      alert("Error generando QR");
+    }
+  }
 
-    // 🔹 Confirmar eliminación
-    document.getElementById("btnConfirmarEliminar").addEventListener("click", function() {
-      const id = document.getElementById("deleteIdAsistencia").value;
-      fetch("https://smarcampus.onrender.com/asistencia/" + id, {
-        method: "DELETE"
-      })
-      .then(res => {
-        if (res.ok) {
-          tabla.ajax.reload();
-          $('#modalEliminar').modal('hide');
-        } else {
-          alert("Error al eliminar asistencia");
-        }
-      })
-      .catch(err => console.error("Error:", err));
-    });
+  // 🔹 Eventos de edición y eliminación
+  $('#tablaAsistencia').on('click', '.btn-warning', function () {
+    const data = tabla.row($(this).parents('tr')).data();
+    if (data) {
+      $('#editIdAsistencia').val(data.id_asistencia);
+      $('#editProfesor').val(data.profesor);
+      $('#editFecha').val(data.fecha);
+      $('#editHoraEntrada').val(data.hora_entrada);
+      $('#editValidacion').val(data.validacion ? "true" : "false");
+      $('#modalEditar').modal('show');
+    }
+  });
 
-    // 🔹 Botón de filtros
-    document.getElementById("formFiltros").addEventListener("submit", function(e) {
-      e.preventDefault();
-      const params = {
-        departamento: document.getElementById("filtroDepartamento").value,
-        carrera: document.getElementById("filtroCarrera").value,
-        fecha: document.getElementById("filtroFecha").value
-      };
-      cargarAsistencia(params);
-      cargarMetricas();
-      cargarGrafica();
-    });
+  document.getElementById("btnGuardarCambios").addEventListener("click", function() {
+    const id = document.getElementById("editIdAsistencia").value;
+    const payload = {
+      profesor: document.getElementById("editProfesor").value,
+      fecha: document.getElementById("editFecha").value,
+      hora_entrada: document.getElementById("editHoraEntrada").value,
+      validacion: document.getElementById("editValidacion").value === "true"
+    };
 
-    // 🔹 Inicialización al cargar la página
-    cargarDepartamentos();
-    cargarCarreras();
-    cargarAsistencia();
+    fetch("/asistencia/" + id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(res => {
+      if (res.ok) {
+        tabla.ajax.reload();
+        $('#modalEditar').modal('hide');
+      } else {
+        alert("Error al actualizar asistencia");
+      }
+    })
+    .catch(err => console.error("Error:", err));
+  });
+
+  $('#tablaAsistencia').on('click', '.btn-danger', function () {
+    const data = tabla.row($(this).parents('tr')).data();
+    if (data) {
+      $('#deleteIdAsistencia').val(data.id_asistencia);
+      $('#modalEliminar').modal('show');
+    }
+  });
+
+  document.getElementById("btnConfirmarEliminar").addEventListener("click", function() {
+    const id = document.getElementById("deleteIdAsistencia").value;
+    fetch("/asistencia/" + id, {
+      method: "DELETE"
+    })
+    .then(res => {
+      if (res.ok) {
+        tabla.ajax.reload();
+        $('#modalEliminar').modal('hide');
+      } else {
+        alert("Error al eliminar asistencia");
+      }
+    })
+    .catch(err => console.error("Error:", err));
+  });
+
+  // 🔹 Botón de filtros
+  document.getElementById("formFiltros").addEventListener("submit", function(e) {
+    e.preventDefault();
+    const params = {
+      departamento: document.getElementById("filtroDepartamento").value,
+      carrera: document.getElementById("filtroCarrera").value,
+      fecha: document.getElementById("filtroFecha").value
+    };
+    cargarAsistencia(params);
     cargarMetricas();
     cargarGrafica();
-  </script>
+  });
+
+  // 🔹 Inicialización al cargar la página
+  cargarDepartamentos();
+  cargarCarreras();
+  cargarAsistencia();
+  cargarMetricas();
+  cargarGrafica();
+</script>
 </body>
 </html>
