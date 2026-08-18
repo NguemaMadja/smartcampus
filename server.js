@@ -2657,6 +2657,7 @@ app.post('/asistencia', async (req, res) => {
     res.status(500).json({ error: "Error registrando asistencia" });
   }
 });
+
 // 4. Listar asistencias con filtros y JOINs
 app.get('/asistencia', async (req, res) => {
   try {
@@ -2700,47 +2701,7 @@ app.get('/asistencia', async (req, res) => {
   }
 });
 
-// 5. Obtener asistencia por ID
-app.get('/asistencia/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query(`SELECT * FROM asistencia WHERE id_asistencia=$1`, [id]);
-    if (!result.rows.length) return res.status(404).json({ error: 'No encontrada' });
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 6. Actualizar asistencia
-app.put('/asistencia/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { fecha, hora_entrada, validacion } = req.body;
-    await pool.query(
-      `UPDATE asistencia
-       SET fecha=$2, hora_entrada=$3, validacion=$4
-       WHERE id_asistencia=$1`,
-      [id, fecha, hora_entrada, validacion]
-    );
-    res.json({ message: 'Asistencia actualizada' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 7. Eliminar asistencia
-app.delete('/asistencia/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query(`DELETE FROM asistencia WHERE id_asistencia=$1`, [id]);
-    res.json({ message: 'Asistencia eliminada' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 8. Métricas de asistencia
+// 5. Métricas de asistencia
 app.get('/asistencia/metricas', async (req, res) => {
   try {
     const hoy = new Date().toISOString().split('T')[0];
@@ -2757,7 +2718,6 @@ app.get('/asistencia/metricas', async (req, res) => {
 
     const totalProfesores = await pool.query(`SELECT COUNT(*) FROM profesores`);
 
-    // Ejemplo de tardanzas: entrada después de las 08:15
     const tardanzasHoy = await pool.query(
       `SELECT COUNT(*) FROM asistencia WHERE fecha = $1 AND hora_entrada > '08:15'`,
       [hoy]
@@ -2774,7 +2734,7 @@ app.get('/asistencia/metricas', async (req, res) => {
   }
 });
 
-// 9. Gráfica de asistencia
+// 6. Gráfica de asistencia
 app.get('/asistencia/grafica', async (req, res) => {
   try {
     const result = await pool.query(
@@ -2790,6 +2750,45 @@ app.get('/asistencia/grafica', async (req, res) => {
       labels: result.rows.map(r => r.fecha),
       values: result.rows.map(r => parseInt(r.total))
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// 7. Obtener asistencia por ID
+app.get('/asistencia/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(`SELECT * FROM asistencia WHERE id_asistencia=$1`, [id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'No encontrada' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 8. Actualizar asistencia
+app.put('/asistencia/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fecha, hora_entrada, validacion } = req.body;
+    await pool.query(
+      `UPDATE asistencia
+       SET fecha=$2, hora_entrada=$3, validacion=$4
+       WHERE id_asistencia=$1`,
+      [id, fecha, hora_entrada, validacion]
+    );
+    res.json({ message: 'Asistencia actualizada' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 9. Eliminar asistencia
+app.delete('/asistencia/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query(`DELETE FROM asistencia WHERE id_asistencia=$1`, [id]);
+    res.json({ message: 'Asistencia eliminada' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
