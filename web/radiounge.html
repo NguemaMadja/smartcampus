@@ -292,8 +292,7 @@ $(document).ready(function() {
         });
       });
   }
-  cargarGraficos();
-  // ➕ Crear programa
+   // ➕ Crear programa
   $('#formAgregarPrograma').on('submit', function(e){
     e.preventDefault();
     const nuevoPrograma = {
@@ -377,30 +376,6 @@ $(document).ready(function() {
     }
   });
 
-  // 💬 Participación
-  $('#formParticipacion').on('submit', function(e){
-    e.preventDefault();
-    if (!this.checkValidity()) return;
-    const nombre = $('#nombreParticipante').val();
-    const mensaje = $('#mensajeParticipante').val();
-    const nuevoMensaje = `<div class="alert alert-info"><strong>${nombre}:</strong> ${mensaje}</div>`;
-    $('#mensajesRecibidos').prepend(nuevoMensaje);
-    $('#nombreParticipante').val("");
-    $('#mensajeParticipante').val("");
-    this.classList.remove('was-validated');
-  });
-
-  // 💬 Chat en vivo básico
-  $('#formChat').on('submit', function(e){
-    e.preventDefault();
-    const nombre = $('#chatNombre').val();
-    const mensaje = $('#chatMensaje').val();
-    const nuevoMsg = `<div><strong>${nombre}:</strong> ${mensaje}</div>`;
-    $('#chatMensajes').append(nuevoMsg);
-    $('#chatNombre').val("");
-    $('#chatMensaje').val("");
-  });
-
   // 🎙️ Estado de transmisión dinámico
   function actualizarEstado(){
     fetch("/radiounge/en_vivo")
@@ -412,6 +387,42 @@ $(document).ready(function() {
       });
   }
   setInterval(actualizarEstado, 10000);
+  // 💬 Mensajes persistentes (con BD)
+  function cargarMensajes() {
+    fetch("/mensajes_radio")
+      .then(res => res.json())
+      .then(data => {
+        $('#mensajesRecibidos').empty();
+        data.forEach(m => {
+          const nuevoMensaje = `<div class="alert alert-info"><strong>${m.nombre}:</strong> ${m.mensaje} <small class="text-muted">(${new Date(m.fecha).toLocaleString()})</small></div>`;
+          $('#mensajesRecibidos').append(nuevoMensaje);
+        });
+      });
+  }
+  cargarMensajes();
+
+  $('#formParticipacion').on('submit', function(e){
+    e.preventDefault();
+    if (!this.checkValidity()) return;
+    const nombre = $('#nombreParticipante').val();
+    const mensaje = $('#mensajeParticipante').val();
+    const nuevoMsg = { usuario_id: null, nombre, mensaje };
+
+    fetch("/mensajes_radio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nuevoMsg)
+    }).then(res => {
+      if(res.ok){
+        cargarMensajes();
+        $('#nombreParticipante').val("");
+        $('#mensajeParticipante').val("");
+        this.classList.remove('was-validated');
+      } else {
+        res.json().then(err => alert("❌ Error al enviar mensaje: " + err.error));
+      }
+    });
+  });
 });
 </script>
 
