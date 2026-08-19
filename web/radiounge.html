@@ -79,7 +79,6 @@
       </div>
     </div>
   </div>
-
   <!-- Reproductor en vivo -->
   <div class="card mb-4">
     <div class="card-header">Transmisión en Vivo</div>
@@ -110,6 +109,7 @@
               <th>Fin</th>
               <th>En Vivo</th>
               <th>Locutor</th>
+              <th>Oyentes</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -165,7 +165,6 @@
       </div>
     </div></div>
   </div>
-
   <!-- Gráficas -->
   <div class="row mb-4">
     <div class="col-md-6 col-sm-12 mb-3">
@@ -176,6 +175,7 @@
     </div>
   </div>
 </div>
+
 <!-- Librerías -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
@@ -187,7 +187,7 @@ $(document).ready(function() {
   const tablaRadio = $('#tablaRadio').DataTable();
   let graficoPie, graficoBar;
 
-  // 🌙 Modo oscuro
+  // 🌙 Modo oscuro persistente
   const toggleBtn = document.getElementById("toggleDarkMode");
   if(localStorage.getItem("darkMode") === "true") {
     document.body.classList.add("dark-mode");
@@ -200,7 +200,7 @@ $(document).ready(function() {
     toggleBtn.textContent = isDark ? "☀️ Modo Claro" : "🌙 Modo Oscuro";
   });
 
-  // 📌 Cargar programas y KPIs con ranking dinámico y medallas
+  // 📌 Cargar programas y KPIs
   function cargarProgramas() {
     fetch("/radiounge")
       .then(res => res.json())
@@ -225,6 +225,7 @@ $(document).ready(function() {
             new Date(r.fecha_hora_fin).toLocaleString(),
             r.es_en_vivo ? "Sí" : "No",
             r.locutorio_id || "-",
+            r.oyentes || 0,
             `<button class="btn btn-warning btn-sm btnEditar" data-id="${r.id}">✏️</button>
              <button class="btn btn-danger btn-sm btnEliminar" data-id="${r.id}">🗑️</button>`
           ]);
@@ -240,7 +241,7 @@ $(document).ready(function() {
   }
   cargarProgramas();
 
-  // 📊 Gráficas con animaciones suaves
+  // 📊 Gráficas
   function cargarGraficos() {
     fetch("/oyentes_radio")
       .then(res => res.json())
@@ -292,7 +293,6 @@ $(document).ready(function() {
       });
   }
   cargarGraficos();
-
   // ➕ Crear programa
   $('#formAgregarPrograma').on('submit', function(e){
     e.preventDefault();
@@ -376,6 +376,7 @@ $(document).ready(function() {
       });
     }
   });
+
   // 💬 Participación
   $('#formParticipacion').on('submit', function(e){
     e.preventDefault();
@@ -402,10 +403,13 @@ $(document).ready(function() {
 
   // 🎙️ Estado de transmisión dinámico
   function actualizarEstado(){
-    const estado = Math.random() > 0.1 ? "En Vivo" : "Fuera de Transmisión";
-    const badge = document.getElementById("estadoTransmision");
-    badge.textContent = estado;
-    badge.className = estado === "En Vivo" ? "badge bg-success" : "badge bg-danger";
+    fetch("/radiounge/en_vivo")
+      .then(res => res.json())
+      .then(data => {
+        const badge = document.getElementById("estadoTransmision");
+        badge.textContent = data.estado;
+        badge.className = data.estado === "En Vivo" ? "badge bg-success" : "badge bg-danger";
+      });
   }
   setInterval(actualizarEstado, 10000);
 });
